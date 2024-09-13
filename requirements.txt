@@ -1,0 +1,4 @@
+huggingface-hub==0.24.6
+tokenizers==0.19.1
+transformers==4.44.2
+lm_eval==0.4.0
