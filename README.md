@@ -4,9 +4,12 @@
 
 ### Environment
 ```bash
-# Docker
-docker run -it --rm --gpus all --ipc=host -v /home/hwanii/workspace/qllm-infer:/root/qllm-infer -v /raid:/raid 166.104.35.43:5000/hwanii/pytorch2.1-cuda11.8:1.2 bash
+# Clone the code
+git clone https://github.com/aiha-lab/qllm-infer.git
+QLLM_PATH=${PWD}/qllm-infer
 
+# Docker
+docker run -it --rm --gpus all --ipc=host -v ${QLLM_PATH}:/root/qllm-infer -v /raid:/raid 166.104.35.43:5000/hwanii/pytorch2.1-cuda11.8:1.2 bash
 cd /root/qllm-infer && pip install -r requirements.txt
 cd /root/qllm-infer/lm-evaluation-harness && pip install -e . 
 ```
