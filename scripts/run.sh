@@ -38,10 +38,10 @@ gptq_static_groups=false
 # Chatbot Simulation
 chat=false
 # Log
-logfile='logs/debug'
+logfile='logs/out.txt'
 # Analysis Tools
 analyze_stats=false
-stats_csv_path='cache/stats/llama3.1-8b-instruct-w8a8sq.csv'
+stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
 get_layerwise_distance=false
 
 for bits_a in 8
@@ -52,19 +52,6 @@ for smoothquant in true
 do
 for gptq in false
 do
-for m in llama3.1-8b-instruct
-#for m in opt-6.7b
-do
-smoothquant_alpha=0.55
-gptq_act_order=false
-chat=false
-#tasks=bbh,gsm8k
-#tasks=boolq,arc_challenge,arc_easy,hellaswag,winogrande,piqa,mmlu
-#tasks=piqa
-tasks=mmlu
-analyze_stats=true
-get_layerwise_distance=false
-model_path=/raid/LLM/${m}
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
     --cache_dir $cache_dir \
@@ -99,7 +86,6 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --analyze_stats $analyze_stats \
     --stats_csv_path $stats_csv_path \
     --get_layerwise_distance $get_layerwise_distance
-done
 done
 done
 done
