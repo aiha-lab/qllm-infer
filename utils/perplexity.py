@@ -4,12 +4,13 @@ import torch
 import logging
 from tqdm import tqdm
 
-def eval_ppl(model, tokenizer, args):
+def eval_ppl(model, tokenizer, args,
+             nsamples=None, datasets=['wikitext2','c4'],
+            ):
     torch.set_grad_enabled(False)
     random.seed(args.seed)
     torch.random.manual_seed(args.seed)
 
-    datasets = ['wikitext2', 'c4']
     results = dict()
 
     for dataset in datasets:
@@ -19,7 +20,8 @@ def eval_ppl(model, tokenizer, args):
                         model=args.model_path,
                         cache_dir=args.cache_dir,
                     )
-        nsamples = input_tok.numel() // args.eval_ppl_seqlen
+        if nsamples is None:
+            nsamples = input_tok.numel() // args.eval_ppl_seqlen
         input_tok = input_tok[0, :(args.eval_ppl_seqlen * nsamples)].view(
             nsamples, args.eval_ppl_seqlen)
 

@@ -12,6 +12,9 @@ def generate(model, text, tokenizer, max_new_tokens, device):
         streamer=streamer,
         pad_token_id=tokenizer.eos_token_id,
         max_new_tokens=max_new_tokens,
+        do_sample=False,
+        top_k=1,
+        use_cache=False,
     )
     generated_ids = [
         output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)

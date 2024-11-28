@@ -6,7 +6,7 @@ export HF_DATASETS_TRUST_REMOTE_CODE=1
 DEVICES=$1
 model_path=$2
 cache_dir='./cache'
-tasks=winogrande,piqa,boolq
+tasks=none
 num_fewshot=none
 limit=none
 eval_ppl=true
@@ -22,7 +22,7 @@ sym_w=false
 groupsize_w=-1
 # SmoothQuant
 smoothquant=false
-smoothquant_alpha=0.85
+smoothquant_alpha=0.5
 smoothquant_dataset=pile
 smoothquant_nsamples=512
 smoothquant_seqlen=512
@@ -38,16 +38,33 @@ gptq_static_groups=false
 # Chatbot Simulation
 chat=false
 # Log
-logfile='logs/llama2-w16a16.log'
+logfile='logs/debug'
+# Analysis Tools
+analyze_stats=false
+stats_csv_path='cache/stats/llama3.1-8b-instruct-w8a8sq.csv'
+get_layerwise_distance=false
 
-for bits_a in 16
+for bits_a in 8
 do
-for bits_w in 16
+for bits_w in 8
 do
-for smoothquant in false
+for smoothquant in true
 do
 for gptq in false
 do
+for m in llama3.1-8b-instruct
+#for m in opt-6.7b
+do
+smoothquant_alpha=0.55
+gptq_act_order=false
+chat=false
+#tasks=bbh,gsm8k
+#tasks=boolq,arc_challenge,arc_easy,hellaswag,winogrande,piqa,mmlu
+#tasks=piqa
+tasks=mmlu
+analyze_stats=true
+get_layerwise_distance=false
+model_path=/raid/LLM/${m}
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
     --cache_dir $cache_dir \
@@ -58,27 +75,31 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --eval_ppl_seqlen $eval_ppl_seqlen \
     --use_cuda_graph $use_cuda_graph \
     --seed $seed \
-    --bits_a=$bits_a \
-    --sym_a=$sym_a \
-    --groupsize_a=$groupsize_a \
-    --bits_w=$bits_w \
-    --sym_w=$sym_w \
-    --groupsize_w=$groupsize_w \
-    --smoothquant=$smoothquant \
-    --smoothquant_alpha=$smoothquant_alpha \
-    --smoothquant_dataset=$smoothquant_dataset \
-    --smoothquant_nsamples=$smoothquant_nsamples \
-    --smoothquant_seqlen=$smoothquant_seqlen \
-    --gptq=$gptq \
-    --gptq_dataset=$gptq_dataset \
-    --gptq_nsamples=$gptq_nsamples \
-    --gptq_seqlen=$gptq_seqlen \
-    --gptq_true_sequential=$gptq_true_sequential \
-    --gptq_percdamp=$gptq_percdamp \
-    --gptq_act_order=$gptq_act_order \
-    --gptq_static_groups=$gptq_static_groups \
+    --bits_a $bits_a \
+    --sym_a $sym_a \
+    --groupsize_a $groupsize_a \
+    --bits_w $bits_w \
+    --sym_w $sym_w \
+    --groupsize_w $groupsize_w \
+    --smoothquant $smoothquant \
+    --smoothquant_alpha $smoothquant_alpha \
+    --smoothquant_dataset $smoothquant_dataset \
+    --smoothquant_nsamples $smoothquant_nsamples \
+    --smoothquant_seqlen $smoothquant_seqlen \
+    --gptq $gptq \
+    --gptq_dataset $gptq_dataset \
+    --gptq_nsamples $gptq_nsamples \
+    --gptq_seqlen $gptq_seqlen \
+    --gptq_true_sequential $gptq_true_sequential \
+    --gptq_percdamp $gptq_percdamp \
+    --gptq_act_order $gptq_act_order \
+    --gptq_static_groups $gptq_static_groups \
     --chat $chat \
-    --logfile $logfile
+    --logfile $logfile \
+    --analyze_stats $analyze_stats \
+    --stats_csv_path $stats_csv_path \
+    --get_layerwise_distance $get_layerwise_distance
+done
 done
 done
 done
