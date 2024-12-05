@@ -31,15 +31,20 @@ def main(args):
                 fp_state_dict[name] = module.weight.data.cpu()
 
     # Quantization
-    if args.bits_w < 16:
-        from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
-        if args.gptq:
-            quantize_gptq(model, args, dev='cuda')
-        else:
-            quantize_nearest(model, args, dev='cuda')
-    if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
-        from lib.quantization.act_quant import add_act_quant
-        add_act_quant(model, args)
+    args.zeroquant=True # FIXME
+    if args.zeroquant:
+        from lib.zeroquant.get_zeroquant import get_zeroquant_model
+        get_zeroquant_model(model, tokenizer, device='cuda', args=args)
+    else:
+        if args.bits_w < 16:
+            from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
+            if args.gptq:
+                quantize_gptq(model, args, dev='cuda')
+            else:
+                quantize_nearest(model, args, dev='cuda')
+        if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
+            from lib.quantization.act_quant import add_act_quant
+            add_act_quant(model, args)
 
     # Analysis Tool
     if args.analyze_stats:

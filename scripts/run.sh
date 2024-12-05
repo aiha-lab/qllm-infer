@@ -48,7 +48,7 @@ for bits_a in 8
 do
 for bits_w in 8
 do
-for smoothquant in true
+for smoothquant in false
 do
 for gptq in false
 do
