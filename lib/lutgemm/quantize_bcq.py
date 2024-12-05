@@ -3,27 +3,29 @@ import numpy as np
 import gc
 from tqdm import tqdm
 
-from utils import CompressionParameter, PACKER
+from .utils import CompressionParameter, PACKER
 
-def quantize_lutgemm(model, args):
+layers = ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]
+def quantize_lutgemm(model, args, dev='cuda'):
     for name, module in model.named_children():
         if len(list(module.children())) > 0:
-            quant_model(module, args)
+            quantize_lutgemm(module, args)
 
         if any(x in name for x in layers):
             print(name)
             original_weight = module.weight.clone().detach()
             # INT4 Quantization -> BCQ
             w_bcq = BCQParameter(original_weight)
-            alpha, binary, binary_shape = w_bcq.compress(
-                do_packing=True, in_ch_wise=True, qbits=args.qbits,
-                rounds=15, group_size=args.group_size)
+            ret, alpha, binary, binary_shape = w_bcq.compress(
+                do_packing=args.do_packing, 
+                in_ch_wise=False, qbits=args.bits_w,
+                rounds=args.round, group_size=args.groupsize_w)
 
-            import pdb; pdb.set_trace() 
-            print(alpha.size())
-            print(binary.size())
+#            import pdb; pdb.set_trace() 
+            print(f"Alpha shape : {alpha.size()}")
+            print(f"Binary shape : {binary.size()}")
             print("="*30)
-
+            module.weight.data = ret.to(module.weight.dtype)
     return model
 
 @torch.inference_mode()
@@ -83,6 +85,7 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, 
 
     wf = wf.to(w_.device)
     # greedy & alternating algo.
+#    import pdb; pdb.set_trace() 
     ret, B, alpha = greedy_mean_torch(w_, n_bits=qbits, wf=wf)
     if rounds > 0 and qbits > 1:
         for _ in tqdm(range(rounds)):
@@ -214,14 +217,14 @@ def batch_cg_torch(A, b, x=None):
 class BCQParameter(CompressionParameter):
     def compress(self, do_packing=False, in_ch_wise=False, **kwargs):
         global PACKER
-        _, binary, alpha, _ = quantize(self.data, transpose=in_ch_wise, **kwargs)
+        ret, binary, alpha, _ = quantize(self.data, transpose=in_ch_wise, **kwargs)
 
         binary_shape = binary.shape
         if do_packing == True:
             binary, binary_shape = PACKER.pack(binary)
             binary = binary.to(self.data.device)
 
-        return alpha, binary, binary_shape
+        return ret, alpha, binary, binary_shape
 
     def decompress(self, alpha, binary, binary_shape, offset=None, do_packing=False, in_ch_wise=False):
         global PACKER

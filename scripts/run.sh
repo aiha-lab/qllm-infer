@@ -27,7 +27,7 @@ smoothquant_dataset=pile
 smoothquant_nsamples=512
 smoothquant_seqlen=512
 # GPTQ
-gptq=false
+gptq=true
 gptq_dataset=c4
 gptq_nsamples=128
 gptq_seqlen=2048
@@ -44,13 +44,13 @@ analyze_stats=false
 stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
 get_layerwise_distance=false
 
-for bits_a in 8
+for bits_a in 16
 do
-for bits_w in 8
+for bits_w in 4
 do
-for smoothquant in true
+for smoothquant in $smoothquant
 do
-for gptq in false
+for gptq in $gptq
 do
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \

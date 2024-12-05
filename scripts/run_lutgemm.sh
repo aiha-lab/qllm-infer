@@ -14,10 +14,10 @@ eval_ppl_seqlen=2048
 use_cuda_graph=true
 seed=0
 # Quantization
-bits_a=8
+bits_a=16
 sym_a=false
 groupsize_a=-1
-bits_w=8
+bits_w=4
 sym_w=false
 groupsize_w=-1
 # SmoothQuant
@@ -38,19 +38,20 @@ gptq_static_groups=false
 # LUTGEMM
 lutgemm=true
 do_packing=false
+round=15
 
 # Chatbot Simulation
 chat=false
 # Log
 logfile='logs/out.txt'
 # Analysis Tools
-analyze_stats=false
-stats_csv_path='cache/llama3.1-8b-instruct-w4a16-lutgemm.csv'
-get_layerwise_distance=false
+analyze_stats=true
+stats_csv_path='cache/llama3.1-8b-instruct-w8a16-lutgemm-round.csv'
+get_layerwise_distance=true
 
 for bits_a in 16
 do
-for bits_w in 4
+for bits_w in 8
 do
 for smoothquant in $smoothquant
 do
@@ -85,7 +86,7 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --gptq_percdamp $gptq_percdamp \
     --gptq_act_order $gptq_act_order \
     --gptq_static_groups $gptq_static_groups \
-    --lutgemm $lutgemm --do_packing $do_packing \
+    --lutgemm $lutgemm --do_packing $do_packing --round $round \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \

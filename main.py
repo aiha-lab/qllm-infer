@@ -41,11 +41,10 @@ def main(args):
                 print("Applying LUT-GEMM with GPTQ quantization.")
             else:
                 # Case: lutgemm-only (BCQ format)
-                quantize_bcq(model, args, dev='cuda')
+                quantize_lutgemm(model, args, dev='cuda')
                 print("Applying LUT-GEMM with BCQ format.")
-            import pdb; pdb.set_trace()
             if args.do_packing:
-                
+                raise NotImplementedError 
         else:
             if args.gptq:
                 # Case: gptq-only
@@ -55,6 +54,7 @@ def main(args):
                 # Case: nearest-only
                 quantize_nearest(model, args, dev='cuda')
                 print("Applying nearest quantization.")
+    import pdb; pdb.set_trace()
 
     # Activation Quantization
     if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
@@ -144,6 +144,7 @@ if __name__ == '__main__':
     # LUT-GEMM Configs
     parser.add_argument('--lutgemm', type=str2bool, default=False)
     parser.add_argument('--do_packing', type=str2bool, default=False)
+    parser.add_argument('--round', type=int, default=1)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')
