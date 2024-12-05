@@ -30,13 +30,33 @@ def main(args):
             if isinstance(module, torch.nn.Linear):
                 fp_state_dict[name] = module.weight.data.cpu()
 
-    # Quantization
+    # Weight Quantization
     if args.bits_w < 16:
         from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
-        if args.gptq:
-            quantize_gptq(model, args, dev='cuda')
+        if args.lutgemm:
+            from lib.lutgemm.quantize_bcq import quantize_lutgemm  # lutgemm-specific BCQ format
+            if args.gptq:
+                # Case: lutgemm + gptq
+                quantize_gptq(model, args, dev='cuda')
+                print("Applying LUT-GEMM with GPTQ quantization.")
+            else:
+                # Case: lutgemm-only (BCQ format)
+                quantize_bcq(model, args, dev='cuda')
+                print("Applying LUT-GEMM with BCQ format.")
+            import pdb; pdb.set_trace()
+            if args.do_packing:
+                
         else:
-            quantize_nearest(model, args, dev='cuda')
+            if args.gptq:
+                # Case: gptq-only
+                quantize_gptq(model, args, dev='cuda')
+                print("Applying GPTQ quantization.")
+            else:
+                # Case: nearest-only
+                quantize_nearest(model, args, dev='cuda')
+                print("Applying nearest quantization.")
+
+    # Activation Quantization
     if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
         from lib.quantization.act_quant import add_act_quant
         add_act_quant(model, args)
@@ -121,6 +141,9 @@ if __name__ == '__main__':
     parser.add_argument('--gptq_percdamp', type=float, default=.01)
     parser.add_argument('--gptq_act_order', type=str2bool, default=False)
     parser.add_argument('--gptq_static_groups', type=str2bool, default=False)
+    # LUT-GEMM Configs
+    parser.add_argument('--lutgemm', type=str2bool, default=False)
+    parser.add_argument('--do_packing', type=str2bool, default=False)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')
