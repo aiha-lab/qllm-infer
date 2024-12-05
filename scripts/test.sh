@@ -17,9 +17,9 @@ seed=0
 bits_a=16
 sym_a=false
 groupsize_a=-1
-bits_w=(4 3 2)
+bits_w=(4)
 sym_w=false
-groupsize_w=(32 64 128 256)
+groupsize_w=(-1)
 # SmoothQuant
 smoothquant=false
 smoothquant_alpha=0.5
@@ -37,7 +37,7 @@ gptq_act_order=false
 gptq_static_groups=false
 # LUTGEMM
 lutgemm=true
-rtn=true
+rtn=false
 do_packing=false
 round=$3
 

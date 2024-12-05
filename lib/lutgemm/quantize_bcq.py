@@ -4,32 +4,73 @@ import gc
 from tqdm import tqdm
 
 from .utils import CompressionParameter, PACKER
+from .rtn_parameter import RTNParameter
 
 layers = ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]
-def quantize_lutgemm(model, args, dev='cuda'):
-    for name, module in model.named_children():
-        if len(list(module.children())) > 0:
-            quantize_lutgemm(module, args)
-
-        if any(x in name for x in layers):
-            print(name)
-            original_weight = module.weight.clone().detach()
-            # INT4 Quantization -> BCQ
-            w_bcq = BCQParameter(original_weight)
-            ret, alpha, binary, binary_shape = w_bcq.compress(
-                do_packing=args.do_packing, 
-                in_ch_wise=False, qbits=args.bits_w,
-                rounds=args.round, group_size=args.groupsize_w)
-
-#            import pdb; pdb.set_trace() 
-            print(f"Alpha shape : {alpha.size()}")
-            print(f"Binary shape : {binary.size()}")
-            print("="*30)
-            module.weight.data = ret.to(module.weight.dtype)
+def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
+    if args.lutgemm and args.rtn:
+        for name, module in model.named_children():
+            full_name = f"{parent_name}.{name}" if parent_name else name
+            if len(list(module.children())) > 0:
+                quantize_lutgemm(module, args, dev=dev, parent_name=full_name)
+    
+            if any(x in name for x in layers):
+                print(full_name)
+                original_weight = module.weight.clone().detach()
+                # INT4 Quantization -> RTN
+                w_rtn = RTNParameter(original_weight)
+                scale, zero, w_quant, w_quant_shape = w_rtn.compress(
+                    in_ch_wise=False, qbits=args.bits_w, group_size=args.groupsize_w,
+                    perchannel=True, sym=False)
+    
+                w_rtn.decompress(scale, zero, w_quant, w_quant_shape, in_ch_wise=False)
+#                import pdb; pdb.set_trace() 
+                module.weight.data = w_rtn.data.to(module.weight.dtype)
+                # Convert INT4 -> BCQ4
+#                alpha, binary, binary_shape, offset = w_rtn.convert_bcq_format(
+#                    scale, zero, w_quant, qbits=args.qbits,
+#                    do_packing=False, in_ch_wise=False)
+#    
+#                print("Parameter size before packing")
+#                print("  alpha.size()  =", alpha.size())
+#                print("  binary.size() =", binary.size())
+#                print("="*30)
+#    
+#                # Packing BCQ4 -> Packed Weight (uint8)
+#                alpha, binary, binary_shape, offset = w_rtn.convert_bcq_format(
+#                    scale, zero, w_quant, qbits=args.qbits,
+#                    do_packing=True, in_ch_wise=False)
+#    
+#                print("Parameter size after packing")
+#                print("  alpha.size()  =", alpha.size())
+#                print("  binary.size() =", binary.size())
+#                print("="*30)
+    else:
+        for name, module in model.named_children():
+            full_name = f"{parent_name}.{name}" if parent_name else name
+    
+            if len(list(module.children())) > 0:
+                quantize_lutgemm(module, args, dev=dev, parent_name=full_name)
+    
+            if any(x in name for x in layers):
+                print(full_name)
+                original_weight = module.weight.clone().detach()
+                # INT4 Quantization -> BCQ
+                w_bcq = BCQParameter(original_weight)
+                ret, alpha, binary, binary_shape = w_bcq.compress(
+                    do_packing=args.do_packing, 
+                    in_ch_wise=False, qbits=args.bits_w,
+                    rounds=args.round, group_size=args.groupsize_w)
+    
+    #            import pdb; pdb.set_trace() 
+                print(f"Alpha shape : {alpha.size()}")
+                print(f"Binary shape : {binary.size()}")
+                print("="*30)
+                module.weight.data = ret.to(module.weight.dtype)
     return model
 
 @torch.inference_mode()
-def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, clipping=1.0, pruning=0.0, use_bst=True):
+def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, use_bst=True):
     '''
     Post-training Weighted Quantization (BCQ format)
     https://openreview.net/pdf?id=2Id6XxTjz7c
@@ -43,10 +84,6 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, 
     :param rounds: number of iterations for refining both alpha and B
     :param group_size: number of weights in which a scaling factor can be shared
     :param transpose: if `transpose` is True, `w` is a transposed when using this method.
-    :param exponent: the exponent term of weighted factor.
-                     if `exponent` is zero, this method is exactly the same as conventional BCQ method.
-    :param clipping: the clipping importance term(0 <= clipping <= 1) of weighted factor.
-    :param pruning: the pruning ratio(0 <= pruning <= 1) of weighted factor.
     :param use_bst: if `use_bst` is True(default), the binary matrix is calculated using BST algorithm.
                     if `use_bst` is False, the binary matrix is calculated with greedy algorithm.
     '''
@@ -65,24 +102,6 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, 
     w_abs = w_.abs()
     ws, _ = w_abs.view(-1).sort()
     wf = torch.ones(w_.shape, dtype=torch.float32, device=w.device)
-    if pruning > 0.0:
-        wf = wf * (w_ != 0.0)
-    if exponent > 0.0 or clipping < 1.0:
-        wf = w_abs / w_abs.max()
-    # weighted factor for C
-    if clipping < 1.0:
-        c_th = ws[int(ws.size(0) * clipping)].item()
-        wf = wf * w_abs.max() / c_th
-        wf[wf > 1.0] = 1.0
-    # weighted factor for E
-    if exponent > 0.0:
-        wf = wf ** exponent
-    # weighted factor for P
-    if pruning > 0.0:
-        p_th = ws[int(ws.shape[0] * pruning)].item()
-        wf[w_abs <= p_th] = 0.0
-        w_[w_abs <= p_th] = 0.0
-
     wf = wf.to(w_.device)
     # greedy & alternating algo.
 #    import pdb; pdb.set_trace() 
@@ -91,6 +110,8 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, 
         for _ in tqdm(range(rounds)):
             ret, B, alpha = refine_mean_torch(w_, ret, B, alpha, wf=wf, use_bst=use_bst)
 
+#    if orig_shape[0] != orig_shape[1]:
+#        import pdb; pdb.set_trace() 
     ret = ret.view(orig_shape) 
     if transpose:
         ret = ret.transpose(1, 0).contiguous()
@@ -107,6 +128,7 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, exponent=0.0, 
     return ret, B, alpha, (wf != 0.0)
 
 def greedy_mean_torch(w, n_bits=1, wf=None):
+#    import pdb; pdb.set_trace() 
     B = torch.zeros(w.shape + (n_bits,), device=w.device)
     Alpha = torch.zeros(w.shape[0], n_bits, device=w.device)
   

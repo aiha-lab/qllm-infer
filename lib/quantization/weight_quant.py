@@ -257,6 +257,7 @@ def quantize_nearest(model, args, dev):
             if args.groupsize_w > 0:
                 W = W.reshape(-1, args.groupsize_w)
             quantizer.find_params(W, weight=True)
+            import pdb; pdb.set_trace() 
             qW = quantize(
                 W, quantizer.scale, quantizer.zero, quantizer.maxq
             ).to(next(iter(layer.parameters())).dtype)
