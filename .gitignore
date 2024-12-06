@@ -2,3 +2,5 @@ cache/*
 __pycache__/
 *.swp
 logs/*
+*.bin
+lib/lutgemm/__pycache__/

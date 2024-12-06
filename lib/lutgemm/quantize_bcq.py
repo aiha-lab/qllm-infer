@@ -9,6 +9,8 @@ from .rtn_parameter import RTNParameter
 layers = ["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"]
 def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
     if args.lutgemm and args.rtn:
+        # for RTN + LUT-GEMM
+        # its functionality is exactly same with RTN-only
         for name, module in model.named_children():
             full_name = f"{parent_name}.{name}" if parent_name else name
             if len(list(module.children())) > 0:
@@ -24,12 +26,16 @@ def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
                     perchannel=True, sym=False)
     
                 w_rtn.decompress(scale, zero, w_quant, w_quant_shape, in_ch_wise=False)
-#                import pdb; pdb.set_trace() 
                 module.weight.data = w_rtn.data.to(module.weight.dtype)
+
+                # [TODO] For using kernel
                 # Convert INT4 -> BCQ4
 #                alpha, binary, binary_shape, offset = w_rtn.convert_bcq_format(
-#                    scale, zero, w_quant, qbits=args.qbits,
+#                    scale, zero, w_quant, qbits=args.bits_w,
 #                    do_packing=False, in_ch_wise=False)
+#                w_bcq = BCQParameter(original_weight)
+#                w_bcq.decompress(alpha, binary, binary_shape, offset=offset, do_packing=False, in_ch_wise=False)
+#                print(abs(w_bcq.data - w_rtn.data).mean())
 #    
 #                print("Parameter size before packing")
 #                print("  alpha.size()  =", alpha.size())
@@ -38,7 +44,7 @@ def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
 #    
 #                # Packing BCQ4 -> Packed Weight (uint8)
 #                alpha, binary, binary_shape, offset = w_rtn.convert_bcq_format(
-#                    scale, zero, w_quant, qbits=args.qbits,
+#                    scale, zero, w_quant, qbits=args.bits_w,
 #                    do_packing=True, in_ch_wise=False)
 #    
 #                print("Parameter size after packing")
@@ -46,6 +52,7 @@ def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
 #                print("  binary.size() =", binary.size())
 #                print("="*30)
     else:
+        # for BCQ + LUT-GEMM
         for name, module in model.named_children():
             full_name = f"{parent_name}.{name}" if parent_name else name
     
@@ -57,16 +64,18 @@ def quantize_lutgemm(model, args, dev='cuda', parent_name=""):
                 original_weight = module.weight.clone().detach()
                 # INT4 Quantization -> BCQ
                 w_bcq = BCQParameter(original_weight)
-                ret, alpha, binary, binary_shape = w_bcq.compress(
+                _, alpha, binary, binary_shape = w_bcq.compress(
                     do_packing=args.do_packing, 
                     in_ch_wise=False, qbits=args.bits_w,
                     rounds=args.round, group_size=args.groupsize_w)
     
-    #            import pdb; pdb.set_trace() 
+                # [TODO] For using kernel
+                if not args.do_packing:
+                    w_bcq.decompress(alpha, binary, binary_shape, do_packing=False, in_ch_wise=False)
                 print(f"Alpha shape : {alpha.size()}")
                 print(f"Binary shape : {binary.size()}")
                 print("="*30)
-                module.weight.data = ret.to(module.weight.dtype)
+                module.weight.data = w_bcq.data.to(module.weight.dtype)
     return model
 
 @torch.inference_mode()
@@ -104,14 +113,11 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, use_bst=True):
     wf = torch.ones(w_.shape, dtype=torch.float32, device=w.device)
     wf = wf.to(w_.device)
     # greedy & alternating algo.
-#    import pdb; pdb.set_trace() 
     ret, B, alpha = greedy_mean_torch(w_, n_bits=qbits, wf=wf)
     if rounds > 0 and qbits > 1:
         for _ in tqdm(range(rounds)):
             ret, B, alpha = refine_mean_torch(w_, ret, B, alpha, wf=wf, use_bst=use_bst)
 
-#    if orig_shape[0] != orig_shape[1]:
-#        import pdb; pdb.set_trace() 
     ret = ret.view(orig_shape) 
     if transpose:
         ret = ret.transpose(1, 0).contiguous()
@@ -121,14 +127,14 @@ def quantize(w, qbits, rounds=15, group_size=-1, transpose=False, use_bst=True):
     B = B.reshape([orig_shape[0], orig_shape[1] // group_size, group_size, qbits])
     alpha = alpha.reshape([orig_shape[0], orig_shape[1] // group_size, qbits])
 
-    B = B.to('cpu')
-    alpha = alpha.to('cpu')
+    # [SHLEE] Why offload to cpu?
+#    B = B.to('cpu')
+#    alpha = alpha.to('cpu')
     torch.cuda.empty_cache()
 
     return ret, B, alpha, (wf != 0.0)
 
 def greedy_mean_torch(w, n_bits=1, wf=None):
-#    import pdb; pdb.set_trace() 
     B = torch.zeros(w.shape + (n_bits,), device=w.device)
     Alpha = torch.zeros(w.shape[0], n_bits, device=w.device)
   

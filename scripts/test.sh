@@ -37,13 +37,12 @@ gptq_act_order=false
 gptq_static_groups=false
 # LUTGEMM
 lutgemm=true
-rtn=false
+rtn=$4
 do_packing=false
 round=$3
 
 # Chatbot Simulation
 chat=false
-get_layerwise_distance=false
 
 mkdir -p logs
 mkdir -p cache
@@ -63,7 +62,8 @@ echo "Running with bits_a=$bits_a, bits_w=$bits_w, smoothquant=$smoothquant, gpt
 logfile="logs/out-rtn-${rtn}-w${bits_w}a${bits_a}-lutgemm-round${round}-group${groupsize_w}.txt"
 # Analysis Tools
 analyze_stats=false
-stats_csv_path="cache/llama3.1-8b-instruct-w${bits_w}a${bits_a}-lutgemm-round${round}-group${groupsize_w}.csv"
+get_layerwise_distance=false
+stats_csv_path="cache/rtn-${rtn}-w${bits_w}a${bits_a}-lutgemm-round${round}-group${groupsize_w}.csv"
 
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \

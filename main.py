@@ -30,20 +30,16 @@ def main(args):
             if isinstance(module, torch.nn.Linear):
                 fp_state_dict[name] = module.weight.data.cpu()
 
-    # Weight Quantization
+   # Weight Quantization
     if args.bits_w < 16:
         from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
         if args.lutgemm:
             from lib.lutgemm.quantize_bcq import quantize_lutgemm  # lutgemm-specific BCQ format
-            if args.gptq:
-                # Case: lutgemm + gptq
-                quantize_gptq(model, args, dev='cuda')
-                print("Applied LUT-GEMM with GPTQ quantization.")
-            else:
-                # Case: lutgemm-only (BCQ format)
-                quantize_lutgemm(model, args, dev='cuda')
-                print("Applied LUT-GEMM with BCQ format.")
+            # Case: lutgemm-only (BCQ format)
+            quantize_lutgemm(model, args, dev='cuda')
+            print("Applied LUT-GEMM with BCQ format.")
             if args.do_packing:
+                # [TODO] using kernel
                 raise NotImplementedError 
         else:
             if args.gptq:
@@ -54,7 +50,6 @@ def main(args):
                 # Case: nearest-only
                 quantize_nearest(model, args, dev='cuda')
                 print("Applied nearest quantization.")
-#    import pdb; pdb.set_trace()
 
     # Activation Quantization
     if args.bits_a < 16 or args.analyze_stats: # Using custom Linear

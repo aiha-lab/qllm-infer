@@ -1,3 +1,5 @@
+# custom version of LUT-GEMM
+
 import torch
 import torch.nn as nn
 import numpy as np

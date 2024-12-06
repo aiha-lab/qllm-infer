@@ -17,9 +17,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-#from clet.functions.rtn import Quantizer
 from .utils import CompressionParameter, PACKER, Quantizer
-#from .quantize_bcq import BCQParameter
 
 class RTNParameter(CompressionParameter):
     def compress(self, in_ch_wise=False, **kwargs):
@@ -27,6 +25,8 @@ class RTNParameter(CompressionParameter):
         group_size = -1
         if 'group_size' in kwargs:
             group_size = kwargs.pop('group_size')
+        if group_size == -1:
+            group_size = data_shape[1]
         out_ch = data_shape[0]
         in_ch = data_shape[1]
 
@@ -77,14 +77,16 @@ class RTNParameter(CompressionParameter):
     def convert_bcq_format(self, scale, zero, quant_data, qbits, do_packing=False, in_ch_wise=False):
         global PACKER
 
+        scale = scale.cuda()
+        zero = zero.cuda()
         zero   = scale * zero
-        upack  = torch.Tensor([[2**i for i in range(qbits)]])
+        upack  = torch.Tensor([[2**i for i in range(qbits)]]).cuda()
         scale  = scale / 2.0
         scale  = torch.matmul(scale, upack)
 
         offset = scale.sum(-1).unsqueeze(-1) - zero
 
-        binary = torch.zeros(list(quant_data.shape) + [qbits])
+        binary = torch.zeros(list(quant_data.shape) + [qbits]).cuda()
         binary_shape = binary.shape
         for i in range(qbits):
             binary[:, :, :, i] = ((quant_data >> i) & 1) * 2.0 - 1.0
@@ -94,20 +96,3 @@ class RTNParameter(CompressionParameter):
             binary = binary.to(self.data.device)
 
         return scale, binary, binary_shape, offset
-
-if __name__ == '__main__':
-    w_org = torch.randn(1024, 256)
-
-    # INT4 Quantization -> RTN
-    w_rtn = RTNParameter(w_org)
-    scale, zero, w_quant, w_quant_shape = w_rtn.compress(in_ch_wise=False, qbits=4, group_size=128, perchannel=True, sym=False)
-    w_rtn.decompress(scale, zero, w_quant, w_quant_shape, in_ch_wise=False)
-    print(abs(w_org-w_rtn.data).mean())
-
-    # Convert INT4 -> BCQ4
-    alpha, binary, binary_shape, offset = w_rtn.convert_bcq_format(scale, zero, w_quant, qbits=4, do_packing=False, in_ch_wise=False)
-
-#    # BCQ Decompress Check
-#    w_bcq = BCQParameter(w_org)
-#    w_bcq.decompress(alpha, binary, binary_shape, offset=offset, do_packing=False, in_ch_wise=False)
-#    print(abs(w_bcq.data - w_rtn.data).mean())
