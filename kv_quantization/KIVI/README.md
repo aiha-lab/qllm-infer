@@ -1,26 +1,18 @@
-# KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache
+# KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache - LMEval branch
 
 Implementation of [KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache](https://arxiv.org/abs/2402.02750)
 
-## Updates
-- [2024.06.07]:🎉 KIVI largely inspires the [HuggingFace Transformers KV Cache quantization](https://huggingface.co/docs/transformers/main/en/kv_cache)
-- [2024.06.06]:(Beta) We extensively optimize the codebase in [branch develop](https://github.com/jy-yuan/KIVI/tree/develop) to reduce the latency of KIVI. Note that **you need to reinstall our CUDA implementation** under the ```quant``` folder. We will release a blog soon about the detailed optimization.
-- [2024.05.01]:🎉 KIVI has been accepted by ICML 2024! See you in Vienna!
-- [2024.04.12]: We add the support for Mistral model family. The performance of LongChat-7b-v1.5-32K and Mistral-7B-Instruct-v0.2 on 15 tasks from LongBench can be found in [long_bench.md](./docs/long_bench.md).
+Use lm-eval to evaluate model on downstream tasks (e.g. GSM8K, Coqa, etc.):
+```bash
+cd lm-evaluation-harness
+pip install -e .
+cd ..
 
-- [2024.04.05]: We release the code for reproducing our CoQA/TruthfulQA/GSM8K results using LM-Eval. Please check the [README of branch lmeval](https://github.com/jy-yuan/KIVI/tree/lmeval).
-
-- [2024.04.04]: 🔥🔥We add a new 5-digit [passkey example](./long_context_example.py) with 12k context length to show the performance of 2bit KIVI under the long context senario.
-
-- [2024.04.04]: (Beta) We add the flash-attention support for KIVI during the prefill phase. 
-
-- [2024.04.03]: We add a new [5-shot GSM8K example.py](./example.py) to show the performance of 2/4 bit KIVI with 32 full precision tokens.
-
-- [2024.02.05]: KIVI ver. 2 is released on [arXiv](https://arxiv.org/abs/2402.02750).
-
-- [2024.02.03]: KIVI code is released.
-
-- [2023.12.29]: KIVI ver. 1 is released on [researchgate](https://www.researchgate.net/publication/376831635_KIVI_Plug-and-play_2bit_KV_Cache_Quantization_with_Streaming_Asymmetric_Quantization).
+# We report TASK in {coqa, truthfulqa_gen, gsm8k} in our paper.
+# If use KIVI implementation, set K_BITS and V_BITS to 2 or 4.
+# If use baseline, set K_BITS and V_BITS to 16.
+bash scripts/lmeval_test.sh {GPU_ID} {K_BITS} {V_BITS} {GROUP_LENGTH} {RESIDUAL_LENGTH} {TASK} {MODEL_NAME}
+```
 
 ## Overview
 
@@ -57,7 +49,7 @@ cd quant && pip install -e .
 
 ### Example
 
-Load model with KIVI: (e.g., Llama-2-7b)
+Load KIVI-quantized model: (e.g., Llama-2-7b)
 
 ```python
 # LLaMA model with KIVI
@@ -77,7 +69,7 @@ model = LlamaForCausalLM_KIVI.from_pretrained(
     pretrained_model_name_or_path='meta-llama/Llama-2-7b-hf',
     config=config,
     cache_dir=CACHE_DIR,
-    torch_dtype=torch.float16,
+    torch_dtype=dtype,
     low_cpu_mem_usage=True,
     device_map="auto",
 )
@@ -92,27 +84,16 @@ tokenizer = AutoTokenizer.from_pretrained(
 # e.g., model.generate(...)
 ```
 
-#### GSM8K example
 We use GSM8K as an example to show how to use KIVI. You can check [example.py](./example.py):
 
 ```bash
 python example.py
 ```
 
-#### Passkey retrieval example
+Evaluate KIVI on LongBench:
 
-Passkey retrieval with KIVI. You can check [long_context_example.py](./long_context_example.py):
-
-```bash
-python long_context_example.py
-```
-
-#### Evaluate KIVI on LongBench
-
-We currently support Llama and Mistral family of models. We recently test KIVI on Mistral-7B-Instruct-v0.2 and Longchat-7b-v1.5-32k. Please check [long_bench.md](./docs/long_bench.md) for more details.
 ```bash
 bash scripts/long_test.sh {GPU_ID} {K_BITS} {V_BITS} {GROUP_LENGTH} {RESIDUAL_LENGTH} {MODEL_NAME}
-python eval_long_bench.py --model {MODEL} # MODEL is the dir name under pred/ Currently it support Llama family model and Mistral model.
 ```
 
 ## Citation
@@ -129,7 +110,7 @@ If you find our method useful, please kindly cite our paper.
 ```
 
 ## Contributing
-We welcome contributions from the research community to improve KIVI. If you have any idea or would like to report a bug, please open an issue or submit a pull request.
+We welcome contributions from the research community to improve the effeicency of KIVI. If you have any idea or would like to report a bug, please open an issue or submit a pull request.
 
 ## License
 The code is released under the MIT License.

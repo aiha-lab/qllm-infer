@@ -6,36 +6,26 @@ from tqdm import tqdm
 import numpy as np
 import random
 import argparse
+
 os.environ["WANDB_DISABLED"] = "true"
 
 from utils.process_args import process_args
-from transformers import LlamaConfig, MistralConfig, AutoTokenizer
+from transformers import LlamaConfig, FalconConfig, MptConfig, MistralConfig, AutoTokenizer
 
+import deepspeed
+
+def parse_args(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "vicuna-v1.5-7b-16k"])
+    parser.add_argument('--e', action='store_true', help="Evaluate on LongBench-E")
+    return parser.parse_args(args)
 
 # This is the customized building prompt for chat models
 def build_chat(tokenizer, prompt, model_name):
-    # For results in KIVI paper (Llama, Llama-Chat, Mistral-7B-v0.1), we do not apply any special treatment to the prompt.
-    # For lmsys/longchat-7b-v1.5-32k and mistralai/Mistral-7B-Instruct-v0.2, we need to rewrite the prompt a little bit.
-    # Update: we add the template for the new llama-3-instruct model
-    if "llama-3" in model_name.lower() and "instruct" in model_name.lower():
-        messages = [
-            {"role": "user", "content": prompt},
-        ]
-        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    elif "longchat" in model_name.lower():
-        from fastchat.model import get_conversation_template
-        conv = get_conversation_template("vicuna")
-        conv.append_message(conv.roles[0], prompt)
-        conv.append_message(conv.roles[1], None)
-        prompt = conv.get_prompt()
-    elif "mistral-v0.2-instruct" in model_name.lower():
-        messages = [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    if "llama" in model_name:
+        prompt = f"[INST]{prompt}[/INST]"
+    else:
+        raise NotImplementedError
     return prompt
 
 def post_process(response, model_name):
@@ -106,78 +96,30 @@ if __name__ == '__main__':
     model_name = model_args.model_name_or_path.split("/")[-1]
     # dtype = torch.bfloat16 if training_args.bf16 else torch.float
     dtype = torch.float16
-    
-    if 'llama' in model_args.model_name_or_path.lower() or 'longchat' in model_args.model_name_or_path.lower():
+    if 'llama' in model_args.model_name_or_path.lower():
         config = LlamaConfig.from_pretrained(model_args.model_name_or_path)
         tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, 
                                             use_fast=False, 
                                             trust_remote_code=True, 
                                             tokenizer_type='llama')
-                                            # model_max_length=training_args.model_max_length)
-    elif 'mistral' in model_args.model_name_or_path.lower():
-        config = MistralConfig.from_pretrained(model_args.model_name_or_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, 
-                                            use_fast=False, 
-                                            trust_remote_code=True)
     else:
         raise NotImplementedError
-    
-    if 'llama' in model_args.model_name_or_path.lower() or 'longchat' in model_args.model_name_or_path.lower():
-        if model_args.k_bits < 16 and model_args.v_bits < 16:
-            from models.llama_kivi import LlamaForCausalLM_KIVI
-            config.k_bits = model_args.k_bits
-            config.v_bits = model_args.v_bits
-            config.group_size = model_args.group_size
-            config.residual_length = model_args.residual_length
-            config.use_flash = True # Note: We activate the flashattention to speed up the inference
-            model = LlamaForCausalLM_KIVI.from_pretrained(
-                pretrained_model_name_or_path=model_args.model_name_or_path,
-                config=config,
-                cache_dir=training_args.cache_dir,
-                torch_dtype=dtype,
-                low_cpu_mem_usage=True,
-                device_map="auto",
-            )
-        else:
-            from transformers import LlamaForCausalLM
-            model = LlamaForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=model_args.model_name_or_path,
-                config=config,
-                cache_dir=training_args.cache_dir,
-                torch_dtype=dtype,
-                low_cpu_mem_usage=True,
-                use_flash_attention_2=True,
-                device_map="auto",
-            )
+    if 'llama' in model_args.model_name_or_path.lower():
+        from models.llama_kivi import LlamaForCausalLM_KIVI
 
-    elif 'mistral' in model_args.model_name_or_path.lower():
-        if model_args.k_bits < 16 and model_args.v_bits < 16:
-            from models.mistral_kivi import MistralForCausalLM_KIVI
-            config.k_bits = model_args.k_bits
-            config.v_bits = model_args.v_bits
-            config.group_size = model_args.group_size
-            config.residual_length = model_args.residual_length
-            config.use_flash = True
-            model = MistralForCausalLM_KIVI.from_pretrained(
-                pretrained_model_name_or_path=model_args.model_name_or_path,
-                config=config,
-                cache_dir=training_args.cache_dir,
-                torch_dtype=dtype,
-                low_cpu_mem_usage=True,
-                device_map="auto",
-            )
-        else:
-            from transformers import MistralForCausalLM
-            model = MistralForCausalLM.from_pretrained(
-                pretrained_model_name_or_path=model_args.model_name_or_path,
-                config=config,
-                cache_dir=training_args.cache_dir,
-                torch_dtype=dtype,
-                low_cpu_mem_usage=True,
-                use_flash_attention_2=True,
-                device_map="auto",
-            )
-
+        config.k_bits = model_args.k_bits
+        config.v_bits = model_args.v_bits
+        config.group_size = model_args.group_size
+        config.residual_length = model_args.residual_length
+        
+        model = LlamaForCausalLM_KIVI.from_pretrained(
+            pretrained_model_name_or_path=model_args.model_name_or_path,
+            config=config,
+            cache_dir=training_args.cache_dir,
+            torch_dtype=dtype,
+            low_cpu_mem_usage=True,
+            device_map="auto",
+        )
     else:
         raise NotImplementedError
 

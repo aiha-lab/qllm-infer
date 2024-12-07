@@ -1,5 +1,4 @@
-// Inspired by https://github.com/ankan-ban/llama_cu_awq 
-// and the official implementation of AWQ
+// Inspired by https://github.com/ankan-ban/llama_cu_awq
 /*
 
 @article{lin2023awq,

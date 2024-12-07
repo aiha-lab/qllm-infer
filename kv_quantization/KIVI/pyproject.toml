@@ -18,7 +18,6 @@ dependencies = [
     "transformers==4.36.2", 
     "toml", "attributedict",
     "accelerate==0.25.0",
-    "fastchat",
     "protobuf",
 ]
 
