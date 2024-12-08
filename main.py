@@ -41,6 +41,40 @@ def main(args):
         from lib.quantization.act_quant import add_act_quant
         add_act_quant(model, args)
 
+    # KV Cache Quantization
+    # KIVI
+    if args.kivi:
+        print("********** KV Quantization: KIVI **********")
+
+        from lib.kivi.models.llama_kivi import LMEvalLlamaForCausalLM_KIVI
+
+        # Support only INT2/INT4 Quantization of KV Cache
+        assert args.kivi_k_bits in [2, 4] and args.kivi_v_bits in [2, 4]
+
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_path, 
+                                            use_fast=False, 
+                                            trust_remote_code=True, 
+                                            tokenizer_type='llama',
+                                            # model_max_length=training_args.model_max_length # will be deleted
+                                            )
+
+        model = LMEvalLlamaForCausalLM_KIVI(
+            k_bits=args.kivi_k_bits,
+            v_bits=args.kivi_v_bits,
+            group_size=args.kivi_group_size,
+            residual_length=args.kivi_residual_length,
+            pretrained=args.model_path,
+            cache_dir=args.cache_dir,
+            dtype=torch.float16,
+            low_cpu_mem_usage=True,
+        )
+
+    # KVQuant
+    elif args.kvquant:
+        print("********** KV Quantization: KIVI **********")
+
+        import pdb; pdb.set_trace()
+    
     # Analysis Tool
     if args.analyze_stats:
         from utils.statistics import summarize_stats
@@ -121,6 +155,14 @@ if __name__ == '__main__':
     parser.add_argument('--gptq_percdamp', type=float, default=.01)
     parser.add_argument('--gptq_act_order', type=str2bool, default=False)
     parser.add_argument('--gptq_static_groups', type=str2bool, default=False)
+    # KIVI Configs
+    parser.add_argument('--kivi', type=str2bool, default=False)
+    parser.add_argument('--kivi_k_bits', type=int, default=16)
+    parser.add_argument('--kivi_v_bits', type=int, default=16)
+    parser.add_argument('--kivi_group_size', type=int, default=32)
+    parser.add_argument('--kivi_residual_length', type=int, default=128)
+    # KVQuant Configs
+    parser.add_argument('--kvquant', type=str2bool, default=False)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')

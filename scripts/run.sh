@@ -35,6 +35,18 @@ gptq_true_sequential=false
 gptq_percdamp=0.01
 gptq_act_order=false
 gptq_static_groups=false
+
+
+# KIVI
+kivi=false
+kivi_k_bits=4
+kivi_v_bits=4
+kivi_group_size=32
+kivi_residual_length=128
+# KVQuant
+kvquant=false
+
+
 # Chatbot Simulation
 chat=false
 # Log
@@ -44,13 +56,17 @@ analyze_stats=false
 stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
 get_layerwise_distance=false
 
-for bits_a in 8
+for bits_a in 16
 do
-for bits_w in 8
+for bits_w in 16
 do
-for smoothquant in true
+for smoothquant in false
 do
 for gptq in false
+do
+for kivi in true
+do
+for kvquant in false
 do
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
@@ -81,11 +97,19 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --gptq_percdamp $gptq_percdamp \
     --gptq_act_order $gptq_act_order \
     --gptq_static_groups $gptq_static_groups \
+    --kivi $kivi \
+    --kivi_k_bits $kivi_k_bits \
+    --kivi_v_bits $kivi_v_bits \
+    --kivi_group_size $kivi_group_size \
+    --kivi_residual_length $kivi_residual_length \
+    --kvquant $kvquant \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \
     --stats_csv_path $stats_csv_path \
     --get_layerwise_distance $get_layerwise_distance
+done
+done
 done
 done
 done

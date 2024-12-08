@@ -2,3 +2,15 @@ cache/*
 __pycache__/
 *.swp
 logs/*
+
+
+kv_quantization/
+.favorites.json
+
+# KIVI
+lib/kivi/kivi.egg-info
+lib/kivi/quant/kivi_gemv.cpython-310-x86_64-linux-gnu.so
+lib/kivi/quant/build
+lib/kivi/quant/kivi_gemv.egg-info
+
+# KVQuant
