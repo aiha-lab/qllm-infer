@@ -63,6 +63,7 @@ def main(args):
         config.v_bits = args.kivi_v_bits
         config.group_size = args.kivi_group_size
         config.residual_length = args.kivi_residual_length
+        config.kivi_prefill_with_quant = args.kivi_prefill_with_quant
 
         model = LlamaForCausalLM_KIVI.from_pretrained(
             pretrained_model_name_or_path=args.model_path,
@@ -73,12 +74,16 @@ def main(args):
             device_map="auto"
         )
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            args.model_path, 
-            use_fast=False, 
-            trust_remote_code=True, 
-            tokenizer_type='llama'
-        )
+        # LLaMA-2 7B; Will be deleted
+        # tokenizer = transformers.AutoTokenizer.from_pretrained(
+        #     args.model_path, 
+        #     use_fast=False, 
+        #     trust_remote_code=True, 
+        #     tokenizer_type='llama',
+        # )
+
+        # LLaMA-3 8B Instruct
+        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_path)
 
     # KVQuant
     if args.kvquant:
@@ -172,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--kivi_v_bits', type=int, default=16)
     parser.add_argument('--kivi_group_size', type=int, default=32)
     parser.add_argument('--kivi_residual_length', type=int, default=128)
+    parser.add_argument('--kivi_prefill_with_quant', type=str2bool, default=False)
     # KVQuant Configs
     parser.add_argument('--kvquant', type=str2bool, default=False)
     # Others

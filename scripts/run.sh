@@ -6,10 +6,10 @@ export HF_DATASETS_TRUST_REMOTE_CODE=1
 DEVICES=$1
 model_path=$2
 cache_dir='./cache'
-tasks=none
+tasks='truthfulqa'
 num_fewshot=none
 limit=none
-eval_ppl=false
+eval_ppl=true
 eval_ppl_seqlen=2048
 use_cuda_graph=true
 seed=0
@@ -43,6 +43,8 @@ kivi_k_bits=4
 kivi_v_bits=4
 kivi_group_size=32
 kivi_residual_length=128
+kivi_prefill_with_quant=true
+
 # KVQuant
 kvquant=false
 
@@ -102,6 +104,7 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --kivi_v_bits $kivi_v_bits \
     --kivi_group_size $kivi_group_size \
     --kivi_residual_length $kivi_residual_length \
+    --kivi_prefill_with_quant=$kivi_prefill_with_quant \
     --kvquant $kvquant \
     --chat $chat \
     --logfile $logfile \
