@@ -39,15 +39,19 @@ gptq_static_groups=false
 
 # KIVI
 kivi=false
-kivi_k_bits=4
-kivi_v_bits=4
+kivi_k_bits=4 # 2, 4
+kivi_v_bits=4 # 2, 4
 kivi_group_size=32
 kivi_residual_length=128
 kivi_prefill_with_quant=false
 
 # KVQuant
 kvquant=false
-
+kvquant_kv_bits=4 # 2, 3, 4
+kvquant_nuq=true
+kvquant_include_sparse=true
+kvquant_sparsity_threshold=0.99
+kvquant_first_few_fp16=1
 
 # Chatbot Simulation
 chat=false
@@ -68,7 +72,7 @@ for gptq in false
 do
 for kivi in false
 do
-for kvquant in false
+for kvquant in true
 do
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
@@ -106,6 +110,11 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --kivi_residual_length $kivi_residual_length \
     --kivi_prefill_with_quant=$kivi_prefill_with_quant \
     --kvquant $kvquant \
+    --kvquant_kv_bits $kvquant_kv_bits \
+    --kvquant_nuq $kvquant_nuq \
+    --kvquant_include_sparse $kvquant_include_sparse \
+    --kvquant_sparsity_threshold $kvquant_sparsity_threshold \
+    --kvquant_first_few_fp16 $kvquant_first_few_fp16 \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \

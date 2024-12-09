@@ -20,7 +20,7 @@ import json
 import math
 import argparse
 
-def get_model(model, seqlen, maxseqlen):
+def get_model(model, seqlen, maxseqlen, dev):
     import torch
     def skip(*args, **kwargs):
         pass
@@ -39,6 +39,7 @@ def get_model(model, seqlen, maxseqlen):
 
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(model, config=config, trust_remote_code=True, use_flash_attention_2=True, torch_dtype=torch.half)
+    model = model.to(dev)
 
     model.seqlen = seqlen  #TODO
     if config.vocab_size == 32001:
@@ -98,7 +99,7 @@ def llama_eval(model, testenc, dev):
     position_ids = cache['position_ids']
 
     for i in range(len(layers)):
-        print("Layer", i)
+        # print("Layer", i)
         layer = layers[i].to(dev)
 
         for j in range(nsamples):
@@ -141,7 +142,7 @@ def llama_eval(model, testenc, dev):
         neg_log_likelihood = loss.float() * model.seqlen
         nlls.append(neg_log_likelihood)
     ppl = torch.exp(torch.stack(nlls).sum() / (nsamples * model.seqlen))
-    print(ppl.item())
+    print("\n{}".format(ppl.item()))
     model.config.use_cache = use_cache
     return ppl.item()
 
@@ -400,11 +401,11 @@ if __name__ == '__main__':
     #load model
     print('Loading model ...')
     if args.load:
-        model = get_model(args.model, args.seqlen, args.maxseqlen)
+        model = get_model(args.model, args.seqlen, args.maxseqlen, DEV)
         model.load_state_dict(torch.load(args.load))
         model.eval()
     else:
-        model = get_model(args.model, args.seqlen, args.maxseqlen)
+        model = get_model(args.model, args.seqlen, args.maxseqlen, DEV)
         model.eval()
 
     if args.seqlen != -1:
