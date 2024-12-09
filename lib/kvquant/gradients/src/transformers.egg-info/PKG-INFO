@@ -1,0 +1,516 @@
+Metadata-Version: 2.1
+Name: transformers
+Version: 4.38.0.dev0
+Summary: State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow
+Home-page: https://github.com/huggingface/transformers
+Author: The Hugging Face team (past and future) with the help of all our contributors (https://github.com/huggingface/transformers/graphs/contributors)
+Author-email: transformers@huggingface.co
+License: Apache 2.0 License
+Keywords: NLP vision speech deep learning transformer pytorch tensorflow jax BERT GPT-2 Wav2Vec2 ViT
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8.0
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: filelock
+Requires-Dist: huggingface-hub<1.0,>=0.19.3
+Requires-Dist: numpy>=1.17
+Requires-Dist: packaging>=20.0
+Requires-Dist: pyyaml>=5.1
+Requires-Dist: regex!=2019.12.17
+Requires-Dist: requests
+Requires-Dist: tokenizers<0.19,>=0.14
+Requires-Dist: safetensors>=0.4.1
+Requires-Dist: tqdm>=4.27
+Provides-Extra: ja
+Requires-Dist: fugashi>=1.0; extra == "ja"
+Requires-Dist: ipadic<2.0,>=1.0.0; extra == "ja"
+Requires-Dist: unidic_lite>=1.0.7; extra == "ja"
+Requires-Dist: unidic>=1.0.2; extra == "ja"
+Requires-Dist: sudachipy>=0.6.6; extra == "ja"
+Requires-Dist: sudachidict_core>=20220729; extra == "ja"
+Requires-Dist: rhoknp<1.3.1,>=1.1.0; extra == "ja"
+Provides-Extra: sklearn
+Requires-Dist: scikit-learn; extra == "sklearn"
+Provides-Extra: tf
+Requires-Dist: tensorflow<2.16,>=2.6; extra == "tf"
+Requires-Dist: onnxconverter-common; extra == "tf"
+Requires-Dist: tf2onnx; extra == "tf"
+Requires-Dist: tensorflow-text<2.16; extra == "tf"
+Requires-Dist: keras-nlp>=0.3.1; extra == "tf"
+Provides-Extra: tf-cpu
+Requires-Dist: tensorflow-cpu<2.16,>=2.6; extra == "tf-cpu"
+Requires-Dist: onnxconverter-common; extra == "tf-cpu"
+Requires-Dist: tf2onnx; extra == "tf-cpu"
+Requires-Dist: tensorflow-text<2.16; extra == "tf-cpu"
+Requires-Dist: keras-nlp>=0.3.1; extra == "tf-cpu"
+Provides-Extra: torch
+Requires-Dist: torch<2.2.0; extra == "torch"
+Requires-Dist: accelerate>=0.21.0; extra == "torch"
+Provides-Extra: accelerate
+Requires-Dist: accelerate>=0.21.0; extra == "accelerate"
+Provides-Extra: retrieval
+Requires-Dist: faiss-cpu; extra == "retrieval"
+Requires-Dist: datasets!=2.5.0; extra == "retrieval"
+Provides-Extra: flax
+Requires-Dist: jax<=0.4.13,>=0.4.1; extra == "flax"
+Requires-Dist: jaxlib<=0.4.13,>=0.4.1; extra == "flax"
+Requires-Dist: flax<=0.7.0,>=0.4.1; extra == "flax"
+Requires-Dist: optax<=0.1.4,>=0.0.8; extra == "flax"
+Provides-Extra: tokenizers
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "tokenizers"
+Provides-Extra: ftfy
+Requires-Dist: ftfy; extra == "ftfy"
+Provides-Extra: onnxruntime
+Requires-Dist: onnxruntime>=1.4.0; extra == "onnxruntime"
+Requires-Dist: onnxruntime-tools>=1.4.2; extra == "onnxruntime"
+Provides-Extra: onnx
+Requires-Dist: onnxconverter-common; extra == "onnx"
+Requires-Dist: tf2onnx; extra == "onnx"
+Requires-Dist: onnxruntime>=1.4.0; extra == "onnx"
+Requires-Dist: onnxruntime-tools>=1.4.2; extra == "onnx"
+Provides-Extra: modelcreation
+Requires-Dist: cookiecutter==1.7.3; extra == "modelcreation"
+Provides-Extra: sagemaker
+Requires-Dist: sagemaker>=2.31.0; extra == "sagemaker"
+Provides-Extra: deepspeed
+Requires-Dist: deepspeed>=0.9.3; extra == "deepspeed"
+Requires-Dist: accelerate>=0.21.0; extra == "deepspeed"
+Provides-Extra: optuna
+Requires-Dist: optuna; extra == "optuna"
+Provides-Extra: ray
+Requires-Dist: ray[tune]>=2.7.0; extra == "ray"
+Provides-Extra: sigopt
+Requires-Dist: sigopt; extra == "sigopt"
+Provides-Extra: integrations
+Requires-Dist: optuna; extra == "integrations"
+Requires-Dist: ray[tune]>=2.7.0; extra == "integrations"
+Requires-Dist: sigopt; extra == "integrations"
+Provides-Extra: serving
+Requires-Dist: pydantic; extra == "serving"
+Requires-Dist: uvicorn; extra == "serving"
+Requires-Dist: fastapi; extra == "serving"
+Requires-Dist: starlette; extra == "serving"
+Provides-Extra: audio
+Requires-Dist: librosa; extra == "audio"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "audio"
+Requires-Dist: phonemizer; extra == "audio"
+Requires-Dist: kenlm; extra == "audio"
+Provides-Extra: speech
+Requires-Dist: torchaudio<2.2.0; extra == "speech"
+Requires-Dist: librosa; extra == "speech"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "speech"
+Requires-Dist: phonemizer; extra == "speech"
+Requires-Dist: kenlm; extra == "speech"
+Provides-Extra: torch-speech
+Requires-Dist: torchaudio<2.2.0; extra == "torch-speech"
+Requires-Dist: librosa; extra == "torch-speech"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "torch-speech"
+Requires-Dist: phonemizer; extra == "torch-speech"
+Requires-Dist: kenlm; extra == "torch-speech"
+Provides-Extra: tf-speech
+Requires-Dist: librosa; extra == "tf-speech"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "tf-speech"
+Requires-Dist: phonemizer; extra == "tf-speech"
+Requires-Dist: kenlm; extra == "tf-speech"
+Provides-Extra: flax-speech
+Requires-Dist: librosa; extra == "flax-speech"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "flax-speech"
+Requires-Dist: phonemizer; extra == "flax-speech"
+Requires-Dist: kenlm; extra == "flax-speech"
+Provides-Extra: vision
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "vision"
+Provides-Extra: timm
+Requires-Dist: timm; extra == "timm"
+Provides-Extra: torch-vision
+Requires-Dist: torchvision<0.17.0; extra == "torch-vision"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "torch-vision"
+Provides-Extra: natten
+Requires-Dist: natten<0.15.0,>=0.14.6; extra == "natten"
+Provides-Extra: codecarbon
+Requires-Dist: codecarbon==1.2.0; extra == "codecarbon"
+Provides-Extra: video
+Requires-Dist: decord==0.6.0; extra == "video"
+Requires-Dist: av==9.2.0; extra == "video"
+Provides-Extra: sentencepiece
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "sentencepiece"
+Requires-Dist: protobuf; extra == "sentencepiece"
+Provides-Extra: testing
+Requires-Dist: pytest<8.0.0,>=7.2.0; extra == "testing"
+Requires-Dist: pytest-xdist; extra == "testing"
+Requires-Dist: timeout-decorator; extra == "testing"
+Requires-Dist: parameterized; extra == "testing"
+Requires-Dist: psutil; extra == "testing"
+Requires-Dist: datasets!=2.5.0; extra == "testing"
+Requires-Dist: dill<0.3.5; extra == "testing"
+Requires-Dist: evaluate>=0.2.0; extra == "testing"
+Requires-Dist: pytest-timeout; extra == "testing"
+Requires-Dist: ruff==0.1.5; extra == "testing"
+Requires-Dist: sacrebleu<2.0.0,>=1.4.12; extra == "testing"
+Requires-Dist: rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1; extra == "testing"
+Requires-Dist: nltk; extra == "testing"
+Requires-Dist: GitPython<3.1.19; extra == "testing"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "testing"
+Requires-Dist: protobuf; extra == "testing"
+Requires-Dist: sacremoses; extra == "testing"
+Requires-Dist: rjieba; extra == "testing"
+Requires-Dist: beautifulsoup4; extra == "testing"
+Requires-Dist: tensorboard; extra == "testing"
+Requires-Dist: pydantic; extra == "testing"
+Requires-Dist: faiss-cpu; extra == "testing"
+Requires-Dist: datasets!=2.5.0; extra == "testing"
+Requires-Dist: cookiecutter==1.7.3; extra == "testing"
+Provides-Extra: deepspeed-testing
+Requires-Dist: deepspeed>=0.9.3; extra == "deepspeed-testing"
+Requires-Dist: accelerate>=0.21.0; extra == "deepspeed-testing"
+Requires-Dist: pytest<8.0.0,>=7.2.0; extra == "deepspeed-testing"
+Requires-Dist: pytest-xdist; extra == "deepspeed-testing"
+Requires-Dist: timeout-decorator; extra == "deepspeed-testing"
+Requires-Dist: parameterized; extra == "deepspeed-testing"
+Requires-Dist: psutil; extra == "deepspeed-testing"
+Requires-Dist: datasets!=2.5.0; extra == "deepspeed-testing"
+Requires-Dist: dill<0.3.5; extra == "deepspeed-testing"
+Requires-Dist: evaluate>=0.2.0; extra == "deepspeed-testing"
+Requires-Dist: pytest-timeout; extra == "deepspeed-testing"
+Requires-Dist: ruff==0.1.5; extra == "deepspeed-testing"
+Requires-Dist: sacrebleu<2.0.0,>=1.4.12; extra == "deepspeed-testing"
+Requires-Dist: rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1; extra == "deepspeed-testing"
+Requires-Dist: nltk; extra == "deepspeed-testing"
+Requires-Dist: GitPython<3.1.19; extra == "deepspeed-testing"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "deepspeed-testing"
+Requires-Dist: protobuf; extra == "deepspeed-testing"
+Requires-Dist: sacremoses; extra == "deepspeed-testing"
+Requires-Dist: rjieba; extra == "deepspeed-testing"
+Requires-Dist: beautifulsoup4; extra == "deepspeed-testing"
+Requires-Dist: tensorboard; extra == "deepspeed-testing"
+Requires-Dist: pydantic; extra == "deepspeed-testing"
+Requires-Dist: faiss-cpu; extra == "deepspeed-testing"
+Requires-Dist: datasets!=2.5.0; extra == "deepspeed-testing"
+Requires-Dist: cookiecutter==1.7.3; extra == "deepspeed-testing"
+Requires-Dist: optuna; extra == "deepspeed-testing"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "deepspeed-testing"
+Requires-Dist: protobuf; extra == "deepspeed-testing"
+Provides-Extra: quality
+Requires-Dist: datasets!=2.5.0; extra == "quality"
+Requires-Dist: isort>=5.5.4; extra == "quality"
+Requires-Dist: ruff==0.1.5; extra == "quality"
+Requires-Dist: GitPython<3.1.19; extra == "quality"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "quality"
+Requires-Dist: urllib3<2.0.0; extra == "quality"
+Provides-Extra: all
+Requires-Dist: tensorflow<2.16,>=2.6; extra == "all"
+Requires-Dist: onnxconverter-common; extra == "all"
+Requires-Dist: tf2onnx; extra == "all"
+Requires-Dist: tensorflow-text<2.16; extra == "all"
+Requires-Dist: keras-nlp>=0.3.1; extra == "all"
+Requires-Dist: torch<2.2.0; extra == "all"
+Requires-Dist: accelerate>=0.21.0; extra == "all"
+Requires-Dist: jax<=0.4.13,>=0.4.1; extra == "all"
+Requires-Dist: jaxlib<=0.4.13,>=0.4.1; extra == "all"
+Requires-Dist: flax<=0.7.0,>=0.4.1; extra == "all"
+Requires-Dist: optax<=0.1.4,>=0.0.8; extra == "all"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "all"
+Requires-Dist: protobuf; extra == "all"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "all"
+Requires-Dist: torchaudio<2.2.0; extra == "all"
+Requires-Dist: librosa; extra == "all"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "all"
+Requires-Dist: phonemizer; extra == "all"
+Requires-Dist: kenlm; extra == "all"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "all"
+Requires-Dist: optuna; extra == "all"
+Requires-Dist: ray[tune]>=2.7.0; extra == "all"
+Requires-Dist: sigopt; extra == "all"
+Requires-Dist: timm; extra == "all"
+Requires-Dist: torchvision<0.17.0; extra == "all"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "all"
+Requires-Dist: codecarbon==1.2.0; extra == "all"
+Requires-Dist: accelerate>=0.21.0; extra == "all"
+Requires-Dist: decord==0.6.0; extra == "all"
+Requires-Dist: av==9.2.0; extra == "all"
+Provides-Extra: docs-specific
+Requires-Dist: hf-doc-builder; extra == "docs-specific"
+Provides-Extra: docs
+Requires-Dist: tensorflow<2.16,>=2.6; extra == "docs"
+Requires-Dist: onnxconverter-common; extra == "docs"
+Requires-Dist: tf2onnx; extra == "docs"
+Requires-Dist: tensorflow-text<2.16; extra == "docs"
+Requires-Dist: keras-nlp>=0.3.1; extra == "docs"
+Requires-Dist: torch<2.2.0; extra == "docs"
+Requires-Dist: accelerate>=0.21.0; extra == "docs"
+Requires-Dist: jax<=0.4.13,>=0.4.1; extra == "docs"
+Requires-Dist: jaxlib<=0.4.13,>=0.4.1; extra == "docs"
+Requires-Dist: flax<=0.7.0,>=0.4.1; extra == "docs"
+Requires-Dist: optax<=0.1.4,>=0.0.8; extra == "docs"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "docs"
+Requires-Dist: protobuf; extra == "docs"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "docs"
+Requires-Dist: torchaudio<2.2.0; extra == "docs"
+Requires-Dist: librosa; extra == "docs"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "docs"
+Requires-Dist: phonemizer; extra == "docs"
+Requires-Dist: kenlm; extra == "docs"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "docs"
+Requires-Dist: optuna; extra == "docs"
+Requires-Dist: ray[tune]>=2.7.0; extra == "docs"
+Requires-Dist: sigopt; extra == "docs"
+Requires-Dist: timm; extra == "docs"
+Requires-Dist: torchvision<0.17.0; extra == "docs"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "docs"
+Requires-Dist: codecarbon==1.2.0; extra == "docs"
+Requires-Dist: accelerate>=0.21.0; extra == "docs"
+Requires-Dist: decord==0.6.0; extra == "docs"
+Requires-Dist: av==9.2.0; extra == "docs"
+Requires-Dist: hf-doc-builder; extra == "docs"
+Provides-Extra: dev-torch
+Requires-Dist: pytest<8.0.0,>=7.2.0; extra == "dev-torch"
+Requires-Dist: pytest-xdist; extra == "dev-torch"
+Requires-Dist: timeout-decorator; extra == "dev-torch"
+Requires-Dist: parameterized; extra == "dev-torch"
+Requires-Dist: psutil; extra == "dev-torch"
+Requires-Dist: datasets!=2.5.0; extra == "dev-torch"
+Requires-Dist: dill<0.3.5; extra == "dev-torch"
+Requires-Dist: evaluate>=0.2.0; extra == "dev-torch"
+Requires-Dist: pytest-timeout; extra == "dev-torch"
+Requires-Dist: ruff==0.1.5; extra == "dev-torch"
+Requires-Dist: sacrebleu<2.0.0,>=1.4.12; extra == "dev-torch"
+Requires-Dist: rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1; extra == "dev-torch"
+Requires-Dist: nltk; extra == "dev-torch"
+Requires-Dist: GitPython<3.1.19; extra == "dev-torch"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev-torch"
+Requires-Dist: protobuf; extra == "dev-torch"
+Requires-Dist: sacremoses; extra == "dev-torch"
+Requires-Dist: rjieba; extra == "dev-torch"
+Requires-Dist: beautifulsoup4; extra == "dev-torch"
+Requires-Dist: tensorboard; extra == "dev-torch"
+Requires-Dist: pydantic; extra == "dev-torch"
+Requires-Dist: faiss-cpu; extra == "dev-torch"
+Requires-Dist: datasets!=2.5.0; extra == "dev-torch"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev-torch"
+Requires-Dist: torch<2.2.0; extra == "dev-torch"
+Requires-Dist: accelerate>=0.21.0; extra == "dev-torch"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "dev-torch"
+Requires-Dist: protobuf; extra == "dev-torch"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "dev-torch"
+Requires-Dist: torchaudio<2.2.0; extra == "dev-torch"
+Requires-Dist: librosa; extra == "dev-torch"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "dev-torch"
+Requires-Dist: phonemizer; extra == "dev-torch"
+Requires-Dist: kenlm; extra == "dev-torch"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "dev-torch"
+Requires-Dist: optuna; extra == "dev-torch"
+Requires-Dist: ray[tune]>=2.7.0; extra == "dev-torch"
+Requires-Dist: sigopt; extra == "dev-torch"
+Requires-Dist: timm; extra == "dev-torch"
+Requires-Dist: torchvision<0.17.0; extra == "dev-torch"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "dev-torch"
+Requires-Dist: codecarbon==1.2.0; extra == "dev-torch"
+Requires-Dist: datasets!=2.5.0; extra == "dev-torch"
+Requires-Dist: isort>=5.5.4; extra == "dev-torch"
+Requires-Dist: ruff==0.1.5; extra == "dev-torch"
+Requires-Dist: GitPython<3.1.19; extra == "dev-torch"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev-torch"
+Requires-Dist: urllib3<2.0.0; extra == "dev-torch"
+Requires-Dist: fugashi>=1.0; extra == "dev-torch"
+Requires-Dist: ipadic<2.0,>=1.0.0; extra == "dev-torch"
+Requires-Dist: unidic_lite>=1.0.7; extra == "dev-torch"
+Requires-Dist: unidic>=1.0.2; extra == "dev-torch"
+Requires-Dist: sudachipy>=0.6.6; extra == "dev-torch"
+Requires-Dist: sudachidict_core>=20220729; extra == "dev-torch"
+Requires-Dist: rhoknp<1.3.1,>=1.1.0; extra == "dev-torch"
+Requires-Dist: hf-doc-builder; extra == "dev-torch"
+Requires-Dist: scikit-learn; extra == "dev-torch"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev-torch"
+Requires-Dist: onnxruntime>=1.4.0; extra == "dev-torch"
+Requires-Dist: onnxruntime-tools>=1.4.2; extra == "dev-torch"
+Provides-Extra: dev-tensorflow
+Requires-Dist: pytest<8.0.0,>=7.2.0; extra == "dev-tensorflow"
+Requires-Dist: pytest-xdist; extra == "dev-tensorflow"
+Requires-Dist: timeout-decorator; extra == "dev-tensorflow"
+Requires-Dist: parameterized; extra == "dev-tensorflow"
+Requires-Dist: psutil; extra == "dev-tensorflow"
+Requires-Dist: datasets!=2.5.0; extra == "dev-tensorflow"
+Requires-Dist: dill<0.3.5; extra == "dev-tensorflow"
+Requires-Dist: evaluate>=0.2.0; extra == "dev-tensorflow"
+Requires-Dist: pytest-timeout; extra == "dev-tensorflow"
+Requires-Dist: ruff==0.1.5; extra == "dev-tensorflow"
+Requires-Dist: sacrebleu<2.0.0,>=1.4.12; extra == "dev-tensorflow"
+Requires-Dist: rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1; extra == "dev-tensorflow"
+Requires-Dist: nltk; extra == "dev-tensorflow"
+Requires-Dist: GitPython<3.1.19; extra == "dev-tensorflow"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev-tensorflow"
+Requires-Dist: protobuf; extra == "dev-tensorflow"
+Requires-Dist: sacremoses; extra == "dev-tensorflow"
+Requires-Dist: rjieba; extra == "dev-tensorflow"
+Requires-Dist: beautifulsoup4; extra == "dev-tensorflow"
+Requires-Dist: tensorboard; extra == "dev-tensorflow"
+Requires-Dist: pydantic; extra == "dev-tensorflow"
+Requires-Dist: faiss-cpu; extra == "dev-tensorflow"
+Requires-Dist: datasets!=2.5.0; extra == "dev-tensorflow"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev-tensorflow"
+Requires-Dist: tensorflow<2.16,>=2.6; extra == "dev-tensorflow"
+Requires-Dist: onnxconverter-common; extra == "dev-tensorflow"
+Requires-Dist: tf2onnx; extra == "dev-tensorflow"
+Requires-Dist: tensorflow-text<2.16; extra == "dev-tensorflow"
+Requires-Dist: keras-nlp>=0.3.1; extra == "dev-tensorflow"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "dev-tensorflow"
+Requires-Dist: protobuf; extra == "dev-tensorflow"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "dev-tensorflow"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "dev-tensorflow"
+Requires-Dist: datasets!=2.5.0; extra == "dev-tensorflow"
+Requires-Dist: isort>=5.5.4; extra == "dev-tensorflow"
+Requires-Dist: ruff==0.1.5; extra == "dev-tensorflow"
+Requires-Dist: GitPython<3.1.19; extra == "dev-tensorflow"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev-tensorflow"
+Requires-Dist: urllib3<2.0.0; extra == "dev-tensorflow"
+Requires-Dist: hf-doc-builder; extra == "dev-tensorflow"
+Requires-Dist: scikit-learn; extra == "dev-tensorflow"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev-tensorflow"
+Requires-Dist: onnxconverter-common; extra == "dev-tensorflow"
+Requires-Dist: tf2onnx; extra == "dev-tensorflow"
+Requires-Dist: onnxruntime>=1.4.0; extra == "dev-tensorflow"
+Requires-Dist: onnxruntime-tools>=1.4.2; extra == "dev-tensorflow"
+Requires-Dist: librosa; extra == "dev-tensorflow"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "dev-tensorflow"
+Requires-Dist: phonemizer; extra == "dev-tensorflow"
+Requires-Dist: kenlm; extra == "dev-tensorflow"
+Provides-Extra: dev
+Requires-Dist: tensorflow<2.16,>=2.6; extra == "dev"
+Requires-Dist: onnxconverter-common; extra == "dev"
+Requires-Dist: tf2onnx; extra == "dev"
+Requires-Dist: tensorflow-text<2.16; extra == "dev"
+Requires-Dist: keras-nlp>=0.3.1; extra == "dev"
+Requires-Dist: torch<2.2.0; extra == "dev"
+Requires-Dist: accelerate>=0.21.0; extra == "dev"
+Requires-Dist: jax<=0.4.13,>=0.4.1; extra == "dev"
+Requires-Dist: jaxlib<=0.4.13,>=0.4.1; extra == "dev"
+Requires-Dist: flax<=0.7.0,>=0.4.1; extra == "dev"
+Requires-Dist: optax<=0.1.4,>=0.0.8; extra == "dev"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "dev"
+Requires-Dist: protobuf; extra == "dev"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "dev"
+Requires-Dist: torchaudio<2.2.0; extra == "dev"
+Requires-Dist: librosa; extra == "dev"
+Requires-Dist: pyctcdecode>=0.4.0; extra == "dev"
+Requires-Dist: phonemizer; extra == "dev"
+Requires-Dist: kenlm; extra == "dev"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "dev"
+Requires-Dist: optuna; extra == "dev"
+Requires-Dist: ray[tune]>=2.7.0; extra == "dev"
+Requires-Dist: sigopt; extra == "dev"
+Requires-Dist: timm; extra == "dev"
+Requires-Dist: torchvision<0.17.0; extra == "dev"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "dev"
+Requires-Dist: codecarbon==1.2.0; extra == "dev"
+Requires-Dist: accelerate>=0.21.0; extra == "dev"
+Requires-Dist: decord==0.6.0; extra == "dev"
+Requires-Dist: av==9.2.0; extra == "dev"
+Requires-Dist: pytest<8.0.0,>=7.2.0; extra == "dev"
+Requires-Dist: pytest-xdist; extra == "dev"
+Requires-Dist: timeout-decorator; extra == "dev"
+Requires-Dist: parameterized; extra == "dev"
+Requires-Dist: psutil; extra == "dev"
+Requires-Dist: datasets!=2.5.0; extra == "dev"
+Requires-Dist: dill<0.3.5; extra == "dev"
+Requires-Dist: evaluate>=0.2.0; extra == "dev"
+Requires-Dist: pytest-timeout; extra == "dev"
+Requires-Dist: ruff==0.1.5; extra == "dev"
+Requires-Dist: sacrebleu<2.0.0,>=1.4.12; extra == "dev"
+Requires-Dist: rouge-score!=0.0.7,!=0.0.8,!=0.1,!=0.1.1; extra == "dev"
+Requires-Dist: nltk; extra == "dev"
+Requires-Dist: GitPython<3.1.19; extra == "dev"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev"
+Requires-Dist: protobuf; extra == "dev"
+Requires-Dist: sacremoses; extra == "dev"
+Requires-Dist: rjieba; extra == "dev"
+Requires-Dist: beautifulsoup4; extra == "dev"
+Requires-Dist: tensorboard; extra == "dev"
+Requires-Dist: pydantic; extra == "dev"
+Requires-Dist: faiss-cpu; extra == "dev"
+Requires-Dist: datasets!=2.5.0; extra == "dev"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev"
+Requires-Dist: datasets!=2.5.0; extra == "dev"
+Requires-Dist: isort>=5.5.4; extra == "dev"
+Requires-Dist: ruff==0.1.5; extra == "dev"
+Requires-Dist: GitPython<3.1.19; extra == "dev"
+Requires-Dist: hf-doc-builder>=0.3.0; extra == "dev"
+Requires-Dist: urllib3<2.0.0; extra == "dev"
+Requires-Dist: fugashi>=1.0; extra == "dev"
+Requires-Dist: ipadic<2.0,>=1.0.0; extra == "dev"
+Requires-Dist: unidic_lite>=1.0.7; extra == "dev"
+Requires-Dist: unidic>=1.0.2; extra == "dev"
+Requires-Dist: sudachipy>=0.6.6; extra == "dev"
+Requires-Dist: sudachidict_core>=20220729; extra == "dev"
+Requires-Dist: rhoknp<1.3.1,>=1.1.0; extra == "dev"
+Requires-Dist: hf-doc-builder; extra == "dev"
+Requires-Dist: scikit-learn; extra == "dev"
+Requires-Dist: cookiecutter==1.7.3; extra == "dev"
+Provides-Extra: torchhub
+Requires-Dist: filelock; extra == "torchhub"
+Requires-Dist: huggingface-hub<1.0,>=0.19.3; extra == "torchhub"
+Requires-Dist: importlib_metadata; extra == "torchhub"
+Requires-Dist: numpy>=1.17; extra == "torchhub"
+Requires-Dist: packaging>=20.0; extra == "torchhub"
+Requires-Dist: protobuf; extra == "torchhub"
+Requires-Dist: regex!=2019.12.17; extra == "torchhub"
+Requires-Dist: requests; extra == "torchhub"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "torchhub"
+Requires-Dist: torch<2.2.0; extra == "torchhub"
+Requires-Dist: tokenizers<0.19,>=0.14; extra == "torchhub"
+Requires-Dist: tqdm>=4.27; extra == "torchhub"
+Provides-Extra: agents
+Requires-Dist: diffusers; extra == "agents"
+Requires-Dist: accelerate>=0.21.0; extra == "agents"
+Requires-Dist: datasets!=2.5.0; extra == "agents"
+Requires-Dist: torch<2.2.0; extra == "agents"
+Requires-Dist: sentencepiece!=0.1.92,>=0.1.91; extra == "agents"
+Requires-Dist: opencv-python; extra == "agents"
+Requires-Dist: Pillow<=15.0,>=10.0.1; extra == "agents"
+
+## Gradient Computation Repository
+We the Fisher Information matrix as a sensitivity metric. This repository, which builds on top of Huggingface's transformer library, is designed to calculate the Fisher sensitivity score (gradient square). This score can be employed in the quantization pipeline.
+
+### Prerequisite
+You will need to have your own Huggingface-compatible LLaMA checkpoint saved at `[MODEL_PATH]`.
+
+Run the following command for setup:
+```
+conda create -n grad python=3.9 -y
+conda activate grad
+pip install -e .
+pip install -r requirements.txt
+pip install accelerate -U
+```
+
+### Command
+Run the following command:
+```
+CUDA_VISIBLE_DEVICES=0 python run-fisher.py --model_name_or_path [MODEL_PATH] --output_dir [OUTPUT_PATH] --dataset wikitext2 --seqlen 2048 --maxseqlen 2048 --num_examples 16 
+```
+
+This command performs the following steps
+
+1. Loads the model from `[MODEL_PATH]`.
+2. Computes the gradient square using a subset of the wikitext2 training dataset as a calibration set. You can define and use your own calibration dataset.
+3. Outputs the gradient square at `[OUTPUT_PATH]`. The output format will be identical to the loaded Huggingface model checkpoint, with the only difference being that the weight values are replaced by the gradient square.
+
+If the model size exceeds the capacity of a single GPU, our framework provides an option to distribute the model across multiple GPUs.
+This is automated by configuring multiple CUDA visible devices.
+To be specific, the model is partitioned into multiple chunks of consecutive layers, and each segment is assigned to an individual GPU device.
+
+You can also use the `--num_examples` argument to change the number of calibration examples. This defaults to 16.
+
+### Troubleshoot
+If you are getting the following error, please open `[MODEL_PATH]/tokenizer_config.json` and fix `"tokenizer_class": "LlamaTokenizer"` to `"tokenizer_class": "LLaMATokenizer"`.
+```
+ValueError: Tokenizer class LlamaTokenizer does not exist or is not currently imported.
+```

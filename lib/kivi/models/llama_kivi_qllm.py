@@ -659,70 +659,77 @@ class LlamaFlashAttention_KIVI(LlamaAttention_KIVI):
                     value_mn = mn
 
         else:
-            # print(f"kivi with flash! {self.k_bits}")
-            input_dtype = query_states.dtype
-            if input_dtype == torch.float32:
-                # Handle the case where the model is quantized
-                if hasattr(self.config, "_pre_quantization_dtype"):
-                    target_dtype = self.config._pre_quantization_dtype
-                else:
-                    target_dtype = self.q_proj.weight.dtype
-
-                logger.warning_once(
-                    f"The input hidden states seems to be silently casted in float32, this might be related to"
-                    f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
-                    f" {target_dtype}."
-                )
-
-                query_states = query_states.to(target_dtype)
-                key_states = key_states.to(target_dtype)
-                value_states = value_states.to(target_dtype)
-            attn_output = self._flash_attention_forward(
-                query_states.transpose(1, 2), key_states.transpose(1, 2), 
-                value_states.transpose(1, 2), None, q_len, dropout=0.0
-            )
-            # quantize
-            if key_states.shape[-2] % self.residual_length != 0:
-                if key_states.shape[-2] < self.residual_length:
-                    key_states_quant = None
-                    key_states_full = key_states
-                else:
-                    key_states_quant = key_states[:, :, :-(key_states.shape[-2] % self.residual_length), :].contiguous()
-                    key_states_full = key_states[:, :, -(key_states.shape[-2] % self.residual_length):, :].contiguous()
-            else:
-                key_states_quant = key_states
-                key_states_full = None
-            if key_states_quant is not None:
-                key_states_quant_trans, key_scale_trans, key_mn_trans = triton_quantize_and_pack_along_last_dim(key_states_quant.transpose(2, 3).contiguous(), self.group_size, self.k_bits)
-            else:
-                key_states_quant_trans = None
-                key_scale_trans = None
-                key_mn_trans = None
+            # Modified KIVI: Prefill with quantized KV cache (WIP)
+            if prefill_with_quant:
+                raise ValueError("prefill_with_quant on flash_attn is not implemented")
             
-            if value_states.shape[-2] <= self.residual_length:
-                value_states_quant = None
-                value_states_full = value_states
-                value_scale = None
-                value_mn = None
+            # Vanila KIVI
             else:
-                value_states_quant = value_states[:, :, :-self.residual_length, :].contiguous()
-                value_states_full = value_states[:, :, -self.residual_length:, :].contiguous()
-                value_states_quant, value_scale, value_mn = triton_quantize_and_pack_along_last_dim(value_states_quant, 
-                                                                                                self.group_size, 
-                                                                                                self.v_bits)
+                # print(f"kivi with flash! {self.k_bits}")
+                input_dtype = query_states.dtype
+                if input_dtype == torch.float32:
+                    # Handle the case where the model is quantized
+                    if hasattr(self.config, "_pre_quantization_dtype"):
+                        target_dtype = self.config._pre_quantization_dtype
+                    else:
+                        target_dtype = self.q_proj.weight.dtype
 
-        past_key_value = (key_states_quant_trans, key_states_full, key_scale_trans, key_mn_trans, 
-                          value_states_quant, value_states_full, value_scale, value_mn, kv_seq_len) if use_cache else None
-        attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+                    logger.warning_once(
+                        f"The input hidden states seems to be silently casted in float32, this might be related to"
+                        f" the fact you have upcasted embedding or layer norm layers in float32. We will cast back the input in"
+                        f" {target_dtype}."
+                    )
 
-        if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
-            attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
-        else:
-            attn_output = self.o_proj(attn_output)
+                    query_states = query_states.to(target_dtype)
+                    key_states = key_states.to(target_dtype)
+                    value_states = value_states.to(target_dtype)
+                attn_output = self._flash_attention_forward(
+                    query_states.transpose(1, 2), key_states.transpose(1, 2), 
+                    value_states.transpose(1, 2), None, q_len, dropout=0.0
+                )
+                # quantize
+                if key_states.shape[-2] % self.residual_length != 0:
+                    if key_states.shape[-2] < self.residual_length:
+                        key_states_quant = None
+                        key_states_full = key_states
+                    else:
+                        key_states_quant = key_states[:, :, :-(key_states.shape[-2] % self.residual_length), :].contiguous()
+                        key_states_full = key_states[:, :, -(key_states.shape[-2] % self.residual_length):, :].contiguous()
+                else:
+                    key_states_quant = key_states
+                    key_states_full = None
+                if key_states_quant is not None:
+                    key_states_quant_trans, key_scale_trans, key_mn_trans = triton_quantize_and_pack_along_last_dim(key_states_quant.transpose(2, 3).contiguous(), self.group_size, self.k_bits)
+                else:
+                    key_states_quant_trans = None
+                    key_scale_trans = None
+                    key_mn_trans = None
+                
+                if value_states.shape[-2] <= self.residual_length:
+                    value_states_quant = None
+                    value_states_full = value_states
+                    value_scale = None
+                    value_mn = None
+                else:
+                    value_states_quant = value_states[:, :, :-self.residual_length, :].contiguous()
+                    value_states_full = value_states[:, :, -self.residual_length:, :].contiguous()
+                    value_states_quant, value_scale, value_mn = triton_quantize_and_pack_along_last_dim(value_states_quant, 
+                                                                                                    self.group_size, 
+                                                                                                    self.v_bits)
 
-        attn_weights = None
+            past_key_value = (key_states_quant_trans, key_states_full, key_scale_trans, key_mn_trans, 
+                            value_states_quant, value_states_full, value_scale, value_mn, kv_seq_len) if use_cache else None
+            attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+
+            if self.config.pretraining_tp > 1:
+                attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
+                o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
+                attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
+            else:
+                attn_output = self.o_proj(attn_output)
+
+            attn_weights = None
+
         return attn_output, attn_weights, past_key_value
 
 
