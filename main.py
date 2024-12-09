@@ -53,7 +53,7 @@ def main(args):
     if args.kivi:
         print("\n********** KV Quantization: KIVI **********\n")
 
-        from lib.kivi.models.llama_kivi import LlamaForCausalLM_KIVI
+        from lib.kivi.models.llama_kivi_qllm import LlamaForCausalLM_KIVI
 
         # Support only INT2/INT4 Quantization of KV Cache
         assert args.kivi_k_bits in [2, 4] and args.kivi_v_bits in [2, 4]
