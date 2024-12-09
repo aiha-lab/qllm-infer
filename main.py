@@ -10,6 +10,13 @@ import torch
 logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
+
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))
+# print("\n********** Waiting for debugger **********\n")
+# debugpy.wait_for_client()
+
+
 def main(args):
     # Load Huggingface Model
     from utils.import_model import model_from_hf_path
@@ -44,33 +51,37 @@ def main(args):
     # KV Cache Quantization
     # KIVI
     if args.kivi:
-        print("********** KV Quantization: KIVI **********")
+        print("\n********** KV Quantization: KIVI **********\n")
 
-        from lib.kivi.models.llama_kivi import LMEvalLlamaForCausalLM_KIVI
+        from lib.kivi.models.llama_kivi import LlamaForCausalLM_KIVI
 
         # Support only INT2/INT4 Quantization of KV Cache
         assert args.kivi_k_bits in [2, 4] and args.kivi_v_bits in [2, 4]
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_path, 
-                                            use_fast=False, 
-                                            trust_remote_code=True, 
-                                            tokenizer_type='llama',
-                                            # model_max_length=training_args.model_max_length # will be deleted
-                                            )
+        config = transformers.LlamaConfig.from_pretrained(args.model_path)
+        config.k_bits = args.kivi_k_bits
+        config.v_bits = args.kivi_v_bits
+        config.group_size = args.kivi_group_size
+        config.residual_length = args.kivi_residual_length
 
-        model = LMEvalLlamaForCausalLM_KIVI(
-            k_bits=args.kivi_k_bits,
-            v_bits=args.kivi_v_bits,
-            group_size=args.kivi_group_size,
-            residual_length=args.kivi_residual_length,
-            pretrained=args.model_path,
+        model = LlamaForCausalLM_KIVI.from_pretrained(
+            pretrained_model_name_or_path=args.model_path,
+            config=config,
             cache_dir=args.cache_dir,
-            dtype=torch.float16,
+            torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
+            device_map="auto"
+        )
+
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_path, 
+            use_fast=False, 
+            trust_remote_code=True, 
+            tokenizer_type='llama'
         )
 
     # KVQuant
-    elif args.kvquant:
+    if args.kvquant:
         print("********** KV Quantization: KIVI **********")
 
         import pdb; pdb.set_trace()

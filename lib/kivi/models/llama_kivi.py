@@ -16,6 +16,30 @@ from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_m
 _CONFIG_FOR_DOC = "LlamaConfig"
 
 
+# Copied from modeling_llama.py
+def get_dtype(dtype: Union[str, torch.dtype]) -> torch.dtype:
+    """Converts `dtype` from `str` to torch.dtype when possible. Does not use an instantiated HF AutoConfig"""
+    if isinstance(dtype, str) and dtype != "auto":
+        # Convert `str` args torch dtype: `float16` -> `torch.float16`
+        _torch_dtype = getattr(torch, dtype)
+    else:
+        _torch_dtype = dtype
+    return _torch_dtype
+
+
+# Copied from modeling_llama.py
+def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
+    """
+    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
+    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
+    """
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
+    if n_rep == 1:
+        return hidden_states
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+
+
 class LlamaAttention_KIVI(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
@@ -125,7 +149,7 @@ class LlamaAttention_KIVI(nn.Module):
             kv_seq_len += past_key_value[-1]
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-        assert self.num_key_value_groups == 1
+        
         # [bsz, nh, t, hd]
         if past_key_value is not None:
             key_states_quant_trans = past_key_value[0]
@@ -138,8 +162,21 @@ class LlamaAttention_KIVI(nn.Module):
             value_mn = past_key_value[7]
 
             if key_states_quant_trans is not None:
-                att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, key_states_quant_trans, 
-                                key_scale_trans, key_mn_trans, self.k_bits)
+
+                # QK^T MHA
+                if self.num_key_value_groups == 1:
+                    att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, key_states_quant_trans, 
+                                    key_scale_trans, key_mn_trans, self.k_bits)
+                              
+                # QK^T for GQA
+                else:
+                    repeated_key_states_quant_trans = repeat_kv(key_states_quant_trans, self.num_key_value_groups)
+                    repeated_key_scale_trans = repeat_kv(key_scale_trans, self.num_key_value_groups)
+                    repeated_key_mn_trans = repeat_kv(key_mn_trans, self.num_key_value_groups)
+
+                    att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, repeated_key_states_quant_trans, 
+                                    repeated_key_scale_trans, repeated_key_mn_trans, self.k_bits)
+            
             else:
                 att_qkquant = None
 
@@ -189,12 +226,32 @@ class LlamaAttention_KIVI(nn.Module):
 
             value_states_full = torch.cat([value_states_full, value_states], dim=2)
             value_full_length = value_states_full.shape[-2]
-            if value_states_quant is None:
-                attn_output = torch.matmul(attn_weights, value_states_full)
-            else:
-                attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], value_states_quant, 
-                                                value_scale, value_mn, self.v_bits)
-                attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], value_states_full)
+
+            # SV for MHA
+            if self.num_key_value_groups == 1:
+                if value_states_quant is None:
+                    attn_output = torch.matmul(attn_weights, value_states_full)
+                else:
+                    attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], value_states_quant, 
+                                                    value_scale, value_mn, self.v_bits)
+                    attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], value_states_full)
+
+            # SV for GQA
+            else: 
+                if value_states_quant is None:
+                    repeated_value_states_full = repeat_kv(value_states_full, self.num_key_value_groups)
+            
+                    attn_output = torch.matmul(attn_weights, repeated_value_states_full)
+
+                else:
+                    repeated_value_states_full = repeat_kv(value_states_full, self.num_key_value_groups)
+                    repeated_value_states_quant = repeat_kv(value_states_quant, self.num_key_value_groups)
+                    repeated_value_scale = repeat_kv(value_scale, self.num_key_value_groups)
+                    repeated_value_mn = repeat_kv(value_mn, self.num_key_value_groups)
+
+                    attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], repeated_value_states_quant, 
+                                                    repeated_value_scale, repeated_value_mn, self.v_bits)
+                    attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], repeated_value_states_full)
             
             if value_full_length > self.residual_length:
                 assert value_full_length == self.residual_length + 1
@@ -334,7 +391,7 @@ class LlamaFlashAttention_KIVI(LlamaAttention_KIVI):
             kv_seq_len += past_key_value[-1]
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-        assert self.num_key_value_groups == 1
+
         # [bsz, nh, t, hd]
         if past_key_value is not None:
             key_states_quant_trans = past_key_value[0]
@@ -347,15 +404,24 @@ class LlamaFlashAttention_KIVI(LlamaAttention_KIVI):
             value_mn = past_key_value[7]
 
             if key_states_quant_trans is not None:
-                att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, key_states_quant_trans, 
-                                key_scale_trans, key_mn_trans, self.k_bits)
-                # att_qkquant_ref = triton_bmm_fA_qB_outer(self.group_size, query_states, key_states_quant_trans, 
-                #                 key_scale_trans, key_mn_trans, self.k_bits)
-                # error = torch.abs(att_qkquant - att_qkquant_ref).float()
-                # rel_error = torch.mean(error / (torch.abs(att_qkquant_ref).float()+1e-5))
-                # print(f"rel error: {rel_error}")
+
+                # QK^T MHA
+                if self.num_key_value_groups == 1:
+                    att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, key_states_quant_trans, 
+                                    key_scale_trans, key_mn_trans, self.k_bits)
+                              
+                # QK^T for GQA
+                else:
+                    repeated_key_states_quant_trans = repeat_kv(key_states_quant_trans, self.num_key_value_groups)
+                    repeated_key_scale_trans = repeat_kv(key_scale_trans, self.num_key_value_groups)
+                    repeated_key_mn_trans = repeat_kv(key_mn_trans, self.num_key_value_groups)
+
+                    att_qkquant = cuda_bmm_fA_qB_outer(self.group_size, query_states, repeated_key_states_quant_trans, 
+                                    repeated_key_scale_trans, repeated_key_mn_trans, self.k_bits)
+            
             else:
                 att_qkquant = None
+                
             if key_states_full is not None:
                 key_states_full = torch.cat([key_states_full, key_states], dim=2)
             else:
@@ -402,12 +468,33 @@ class LlamaFlashAttention_KIVI(LlamaAttention_KIVI):
 
             value_states_full = torch.cat([value_states_full, value_states], dim=2)
             value_full_length = value_states_full.shape[-2]
-            if value_states_quant is None:
-                attn_output = torch.matmul(attn_weights, value_states_full)
-            else:
-                attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], value_states_quant, 
-                                                value_scale, value_mn, self.v_bits)
-                attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], value_states_full)
+          
+            # SV for MHA
+            if self.num_key_value_groups == 1:
+                if value_states_quant is None:
+                    attn_output = torch.matmul(attn_weights, value_states_full)
+                else:
+                    attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], value_states_quant, 
+                                                    value_scale, value_mn, self.v_bits)
+                    attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], value_states_full)
+
+            # SV for GQA
+            else: 
+                if value_states_quant is None:
+                    repeated_value_states_full = repeat_kv(value_states_full, self.num_key_value_groups)
+            
+                    attn_output = torch.matmul(attn_weights, repeated_value_states_full)
+
+                else:
+                    repeated_value_states_full = repeat_kv(value_states_full, self.num_key_value_groups)
+                    repeated_value_states_quant = repeat_kv(value_states_quant, self.num_key_value_groups)
+                    repeated_value_scale = repeat_kv(value_scale, self.num_key_value_groups)
+                    repeated_value_mn = repeat_kv(value_mn, self.num_key_value_groups)
+
+                    attn_output = cuda_bmm_fA_qB_outer(self.group_size, attn_weights[:, :, :, :-value_full_length], repeated_value_states_quant, 
+                                                    repeated_value_scale, repeated_value_mn, self.v_bits)
+                    attn_output += torch.matmul(attn_weights[:, :, :, -value_full_length:], repeated_value_states_full)
+            
             attn_output = attn_output.transpose(1, 2).contiguous()
             if value_full_length > self.residual_length:
                 assert value_full_length == self.residual_length + 1
@@ -1098,7 +1185,7 @@ class LMEvalLlamaForCausalLM_KIVI(HFLM):
                     if bnb_4bit_quant_type:
                         model_kwargs["bnb_4bit_quant_type"] = bnb_4bit_quant_type
                     if bnb_4bit_compute_dtype:
-                        model_kwargs["bnb_4bit_compute_dtype"] = utils.get_dtype(
+                        model_kwargs["bnb_4bit_compute_dtype"] = get_dtype(
                             bnb_4bit_compute_dtype
                         )
             self._model = LlamaForCausalLM_KIVI.from_pretrained(
@@ -1106,7 +1193,7 @@ class LMEvalLlamaForCausalLM_KIVI(HFLM):
                 cache_dir=cache_dir,
                 revision=revision,
                 config=self._config,
-                torch_dtype=utils.get_dtype(dtype),
+                torch_dtype=get_dtype(dtype),
                 low_cpu_mem_usage=low_cpu_mem_usage,
                 trust_remote_code=trust_remote_code,
                 load_in_8bit=load_in_8bit,
