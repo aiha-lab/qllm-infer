@@ -5,6 +5,7 @@ logs/*
 
 
 kv_quantization/
+.vscode/
 .favorites.json
 
 # KIVI

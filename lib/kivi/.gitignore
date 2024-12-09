@@ -6,6 +6,7 @@ cached_models
 build
 *.so
 out_*
+*.sh
 *.jsonl
 *.pt
 notebook
