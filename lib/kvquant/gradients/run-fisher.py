@@ -260,6 +260,10 @@ def train():
     _model = model.model
     _layers = _model.layers
     _model.set_devices()
+
+    # if not ("llama3.1-8b-instruct" in model_args.model_name_or_path):
+    #     _model.set_devices()
+    
     grads = {}
 
     # main loop

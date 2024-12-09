@@ -15,3 +15,4 @@ lib/kivi/quant/build
 lib/kivi/quant/kivi_gemv.egg-info
 
 # KVQuant
+lib/kvquant/gradients/outputs/
