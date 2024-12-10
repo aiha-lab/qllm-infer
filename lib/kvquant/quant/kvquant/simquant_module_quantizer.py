@@ -559,6 +559,7 @@ class SimQuant:
         self.qout = None
         torch.cuda.empty_cache()
 
+
 # drop-in layer replacement class
 class QuantLinearSim(nn.Module):
     def __init__(
@@ -789,6 +790,247 @@ class QuantLinearSim(nn.Module):
         y = y.half()
         return y
 
+
+# drop-in layer replacement class for qllm
+class QuantLinearSim_qllm(nn.Module):
+    def __init__(
+                    self,
+                    name,
+                    bits,
+                    quantizer,
+                    infeatures,
+                    outfeatures,
+                    weight,
+                    bias,
+                    perchannel=True,
+                    include_sparse=False,
+                    sparsity_threshold=0.999,
+                    dynamicquantization=False,
+                    nuq=False,
+                    nf_nuq=True,
+                    norm=False,
+                    first_few_fp16=-1,
+                    cap_outliers=-1,
+                    clamp=False
+                ):
+
+        super().__init__()
+        if bits not in [2,3,4,5]:
+            raise NotImplementedError("Only 3, 4, 5 bits are supported.")
+        self.name = name
+        self.infeatures = infeatures
+        self.outfeatures = outfeatures
+        self.bits = bits
+
+        self.weight = weight.T.detach().cpu()
+        if bias:
+            self.bias = bias.detach().cpu()
+        else:
+            self.bias = None
+
+        self.perchannel = perchannel
+        self.dynamicquantization = dynamicquantization
+        self.clamp = clamp
+
+        if perchannel:
+            self.qchannel = 0
+        else: #per-token quant
+            self.qchannel = -1
+
+        self.ochannel = self.qchannel
+
+        self.include_sparse = include_sparse
+        self.sparsity_threshold = sparsity_threshold
+        self.outlier_threshold_upper = torch.tensor(quantizer[0]).cuda().flatten().half()
+        self.outlier_threshold_lower = torch.tensor(quantizer[1]).cuda().flatten().half()
+
+        self.nuq = nuq
+        self.nf_nuq = nf_nuq
+        if self.nuq and not self.nf_nuq:
+            self.lut = quantizer[2]
+        else:
+            self.lut = None
+
+        if norm:
+            self.normscale = quantizer[3]
+            self.normoffset = quantizer[4]
+            self.norm = True
+        else:
+            self.norm = False
+            self.normscale = None
+            self.normoffset = None
+
+        self.cap_outliers = cap_outliers
+        self.first_few_fp16 = first_few_fp16
+
+        # for normalfloat support - compute NF signposts
+        if self.nf_nuq:
+            dist = Normal(torch.tensor([0.0]), torch.tensor([1.0]))
+            # get evenly spaced percentile values
+
+            num_signposts_pos = (2 ** (self.bits - 1)) + 1 # for pos half
+            num_signposts_neg = (2 ** (self.bits - 1)) # for neg half
+
+            self.nf_signposts_negative = []
+            self.nf_signposts_positive = []
+
+            # from https://arxiv.org/pdf/2306.06965.pdf
+            offsets = [0.5*(1/32 + 1/30), 1 - 0.5*(1/32 + 1/30)]
+            list1 = [offsets[0]]
+            spacing = (0.5 - offsets[0]) / (2 ** (self.bits - 1) - 1)
+
+            add = offsets[0]
+            for i in range(num_signposts_neg - 1):
+                add += spacing
+                list1.append(add)
+
+            list2 = []
+            spacing = (offsets[1] - 0.5) / (2 ** (self.bits - 1)) #1 extra space
+            add = 0.5
+            for i in range(num_signposts_pos - 1):
+                list2.append(add)
+                add += spacing
+            list2.append(offsets[-1])
+
+            # first do negative part [0->0.5]
+            for i in range(num_signposts_neg):
+                v1 = list1[i]
+                val = dist.icdf(torch.tensor([v1])).data.numpy()
+                self.nf_signposts_negative.append(torch.tensor(val).item())
+
+            # next do positive part [0.5->1]
+            for i in range(num_signposts_pos):
+                v1 = list2[i]
+                val = dist.icdf(torch.tensor([v1])).data.numpy()
+                self.nf_signposts_positive.append(torch.tensor(val).item())
+
+            signpost_neg_min = self.nf_signposts_negative[0]
+            signpost_neg_max = self.nf_signposts_negative[-1]
+            rangeval = abs(signpost_neg_min)-abs(signpost_neg_max)
+            off = abs(signpost_neg_max)
+            for s in range(len(self.nf_signposts_negative)):
+                self.nf_signposts_negative[s] = (self.nf_signposts_negative[s] + off) / rangeval
+
+            signpost_pos_min = self.nf_signposts_positive[0]
+            signpost_pos_max = self.nf_signposts_positive[-1]
+            rangeval = abs(signpost_pos_max)-abs(signpost_pos_min)
+            off = abs(signpost_pos_min)
+
+            for s in range(len(self.nf_signposts_positive)):
+                self.nf_signposts_positive[s] = (self.nf_signposts_positive[s] - off) / rangeval
+
+            del self.nf_signposts_positive[0]
+
+            # delete last negative value and merge
+            self.nf_signposts = self.nf_signposts_negative + self.nf_signposts_positive
+
+            assert (len(self.nf_signposts) == (2 ** self.bits))
+
+    #replacement forward pass
+    def forward(self, x, prefill_with_quant, other_mat=None):
+
+        out_shape = x.shape[:-1] + (self.outfeatures, )
+        x = x.reshape(-1,x.shape[-1])
+
+        # copying weight to / from device during evaluation lets us evaluate
+        # a large model with limitted memory usage
+
+        self.weight = self.weight.to(x.device)
+        if self.bias is not None:
+            self.bias = self.bias.to(x.device)
+
+        x = x.half() # for now cast to fp16 and back (quantization code assumes fp32)
+        y = x @ self.weight
+        y = y + self.bias if self.bias is not None else y
+        y = y.float()
+
+        # if using dense-and-sparse quantization, detect outliers in output tensor
+        if self.include_sparse:
+            if self.dynamicquantization:
+                outlier_mask = get_outliers_dynamic(
+                    y,
+                    channel=self.ochannel,
+                    thresh=self.sparsity_threshold,
+                    first_few_fp16=self.first_few_fp16
+                )
+            else:
+                self.outlier_threshold_upper = self.outlier_threshold_upper.to(y.device)
+                self.outlier_threshold_lower = self.outlier_threshold_lower.to(y.device)
+                outlier_mask = get_outliers(
+                    y,
+                    channel=self.ochannel,
+                    outlier_threshold_upper=self.outlier_threshold_upper,
+                    outlier_threshold_lower=self.outlier_threshold_lower,
+                    cap_outliers=self.cap_outliers,
+                    first_few_fp16=self.first_few_fp16
+                )
+        else:
+            outlier_mask = None
+
+
+        # qllm: copy FP16 output tensor
+        if prefill_with_quant:
+            y_fp16 = None
+        else:
+            y_fp16 = y.clone().detach().half()
+
+
+        # quantize output tensor
+        if self.nuq:
+            if self.nf_nuq:
+                y = quant_fn_nf(
+                    y,
+                    bits=self.bits,
+                    qchannel=self.qchannel,
+                    maxval=self.outlier_threshold_upper,
+                    minval=self.outlier_threshold_lower,
+                    include_sparse=self.include_sparse,
+                    outlier_mask=outlier_mask,
+                    dynamicquantization=self.dynamicquantization,
+                    nf_lut=self.nf_signposts
+                )
+            else:
+                y = quant_fn_nuq_recon(
+                    y,
+                    bits=self.bits,
+                    qchannel=self.qchannel,
+                    maxval=self.outlier_threshold_upper,
+                    minval=self.outlier_threshold_lower,
+                    include_sparse=self.include_sparse,
+                    outlier_mask=outlier_mask,
+                    dynamicquantization=self.dynamicquantization,
+                    lut=self.lut,
+                    norm=self.norm,
+                    normscale=self.normscale,
+                    normoffset=self.normoffset,
+                    first_few_fp16=self.first_few_fp16
+                )
+
+        else:
+            # low-bit uniform simulated quant
+            y = quant_fn_zp(
+                y,
+                bits=self.bits,
+                qchannel=self.qchannel,
+                maxval=self.outlier_threshold_upper,
+                minval=self.outlier_threshold_lower,
+                include_sparse=self.include_sparse,
+                outlier_mask=outlier_mask,
+                dynamicquantization=self.dynamicquantization,
+                clamp=self.clamp
+            )
+
+        self.weight = self.weight.cpu()
+        if self.bias is not None:
+            self.bias = self.bias.cpu()
+
+        y = y.reshape(out_shape)
+
+        y = y.half()
+
+        return y, y_fp16
+
+
 # update modules
 def make_quant_sim(
                     module,
@@ -850,3 +1092,66 @@ def make_quant_sim(
                         first_few_fp16=first_few_fp16,
                         clamp=clamp
                       )
+
+
+# update modules for qllm
+def make_quant_sim_qllm(
+                    module,
+                    quantizers,
+                    bits,
+                    name='',
+                    perchannel=True,
+                    include_sparse=False,
+                    sparsity_threshold=0.999,
+                    dynamicquantization=False,
+                    nuq=False,
+                    nf_nuq=True,
+                    norm=False,
+                    cap_outliers=-1,
+                    first_few_fp16=-1,
+                    clamp=False
+                ):
+    if isinstance(module, QuantLinearSim_qllm):
+        return
+    for attr in dir(module):
+        tmp = getattr(module, attr)
+        name1 = name + '.' + attr if name != '' else attr
+        if name1 in quantizers.keys():
+            delattr(module, attr)
+            setattr(module, attr, QuantLinearSim_qllm(
+                                                    name1,
+                                                    bits,
+                                                    quantizers[name1],
+                                                    tmp.in_features,
+                                                    tmp.out_features,
+                                                    tmp.weight,
+                                                    tmp.bias is not None,
+                                                    perchannel=perchannel,
+                                                    include_sparse=include_sparse,
+                                                    sparsity_threshold=sparsity_threshold,
+                                                    dynamicquantization=dynamicquantization,
+                                                    nuq=nuq,
+                                                    nf_nuq=nf_nuq,
+                                                    norm=norm,
+                                                    cap_outliers=cap_outliers,
+                                                    first_few_fp16=first_few_fp16,
+                                                    clamp=clamp
+                                                ))
+        del tmp
+    for name1, child in module.named_children():
+        make_quant_sim_qllm(
+                            child,
+                            quantizers,
+                            bits,
+                            name + '.' + name1 if name != '' else name1,
+                            perchannel=perchannel,
+                            include_sparse=include_sparse,
+                            sparsity_threshold=sparsity_threshold,
+                            dynamicquantization=dynamicquantization,
+                            nuq=nuq,
+                            nf_nuq=nf_nuq,
+                            norm=norm,
+                            cap_outliers=cap_outliers,
+                            first_few_fp16=first_few_fp16,
+                            clamp=clamp
+                        )

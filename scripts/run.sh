@@ -52,6 +52,7 @@ kvquant_nuq=true
 kvquant_include_sparse=true
 kvquant_sparsity_threshold=0.99
 kvquant_first_few_fp16=1
+kvquant_prefill_with_quant=false
 
 # Chatbot Simulation
 chat=false
@@ -115,6 +116,7 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --kvquant_include_sparse $kvquant_include_sparse \
     --kvquant_sparsity_threshold $kvquant_sparsity_threshold \
     --kvquant_first_few_fp16 $kvquant_first_few_fp16 \
+    --kvquant_prefill_with_quant=$kvquant_prefill_with_quant \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \

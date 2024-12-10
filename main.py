@@ -51,7 +51,7 @@ def main(args):
     # KV Cache Quantization
     # KIVI: load modified model
     if args.kivi:
-        print("\n********** KV Quantization: KIVI **********\n")
+        print("\n********** KV Cache Quantization: KIVI **********\n")
 
         from lib.kivi.models.llama_kivi_qllm import LlamaForCausalLM_KIVI
 
@@ -74,83 +74,20 @@ def main(args):
             device_map="auto"
         )
 
-    # KVQuant: load vanila model and quantizer, then modify model
+    # KVQuant: load modifed model
     if args.kvquant:
-        print("\n********** KV Quantization: KVQuant **********\n")
+        print("\n********** KV Cache Quantization: KVQuant **********\n")
         
-        import pickle
-        from lib.kvquant.quant.llama_simquant import get_model
-        from kvquant.simquant_module_quantizer import make_quant_sim
+        from lib.kvquant.models.llama_kvquant_qllm import LlamaForCausalLM_KVQuant
+        from lib.kvquant.quant.llama_simquant import get_modified_model_qllm
 
-        # load vanila model
-        config = transformers.AutoConfig.from_pretrained(args.model_path)
-        maxseqlen = getattr(config, "max_position_embeddings", None)
-        seqlen = -1 # dummy
-
-        model = get_model(args.model_path, seqlen, maxseqlen, 'cuda')
-        model.eval()
-        model = model.half()
-
-        # load quantizer
+        # load quantized model
         quantizer_path = "lib/kvquant/quant/quantizers/quantizers_{}_{}bits.pickle".format(args.model_path.split('/')[-1], args.kvquant_kv_bits)
-        with open(quantizer_path, 'rb') as handle:
-            quantizers = pickle.load(handle)
-
-        # replace layers
-        perchannelquant = {}
-        pertokenquant = {}
-
-        perchannel_match = ["k_proj"]
-        pertoken_match = ["v_proj"]
-
-        for k in quantizers.keys():
-            # filter out tensor list
-            for p in perchannel_match:
-                if p in k:
-                    perchannelquant[k] = quantizers[k]
-
-            for p in pertoken_match:
-                if p in k:
-                    pertokenquant[k] = quantizers[k]
-
-        # default arg for make_quant_sim
-        nf_nuq=False
-        norm=False
-        cap_outliers=-1
-        clamp=False
-
-        #per-vector quant
-        make_quant_sim(
-            model,
-            perchannelquant,
-            args.kvquant_kv_bits,
-            perchannel=True,
-            include_sparse=args.kvquant_include_sparse,
-            sparsity_threshold=args.kvquant_sparsity_threshold,
-            dynamicquantization=False,
-            nuq=args.kvquant_nuq,
-            nf_nuq=nf_nuq,
-            norm=norm,
-            cap_outliers=cap_outliers,
-            first_few_fp16=args.kvquant_first_few_fp16,
-            clamp=clamp
-        )
-
-        #per-vector quant
-        make_quant_sim(
-            model,
-            pertokenquant,
-            args.kvquant_kv_bits,
-            perchannel=False,
-            include_sparse=args.kvquant_include_sparse,
-            sparsity_threshold=args.kvquant_sparsity_threshold,
-            dynamicquantization=True,
-            nuq=args.kvquant_nuq,
-            nf_nuq=nf_nuq,
-            norm=norm,
-            cap_outliers=-cap_outliers,
-            first_few_fp16=args.kvquant_first_few_fp16,
-            clamp=clamp
+        model = get_modified_model_qllm(
+            args.model_path, quantizer_path, args.cache_dir,
+            args.kvquant_kv_bits, args.kvquant_nuq, args.kvquant_include_sparse, 
+            args.kvquant_sparsity_threshold, args.kvquant_first_few_fp16,
+            LlamaForCausalLM_KVQuant
         )
 
     # Analysis Tool
@@ -247,6 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('--kvquant_include_sparse', type=str2bool, default=True)
     parser.add_argument('--kvquant_sparsity_threshold', type=float, default=0.99)
     parser.add_argument('--kvquant_first_few_fp16', type=int, default=1)
+    parser.add_argument('--kvquant_prefill_with_quant', type=str2bool, default=False)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')

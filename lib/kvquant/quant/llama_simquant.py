@@ -20,6 +20,91 @@ import json
 import math
 import argparse
 
+# qllm
+def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq, include_sparse, sparsity_threshold, first_few_fp16, causalllm):
+    import torch
+    def skip(*args, **kwargs):
+        pass
+    torch.nn.init.kaiming_uniform_ = skip
+    torch.nn.init.uniform_ = skip
+    torch.nn.init.normal_ = skip
+
+    from transformers import AutoConfig
+    config = AutoConfig.from_pretrained(model_path)
+
+    # load vanila model
+    model = causalllm.from_pretrained(
+        pretrained_model_name_or_path=model_path,
+        config=config,
+        cache_dir=cache_dir,
+        torch_dtype=torch.float16,
+        device_map="auto",
+        use_flash_attention_2=True
+    ).eval()
+
+    # load quantizer
+    with open(quantizer_path, 'rb') as handle:
+        quantizers = pickle.load(handle)
+        
+    # replace K Proj and V Proj
+    perchannelquant = {}
+    pertokenquant = {}
+
+    perchannel_match = ["k_proj"]
+    pertoken_match = ["v_proj"]
+
+    for k in quantizers.keys():
+        # filter out tensor list
+        for p in perchannel_match:
+            if p in k:
+                perchannelquant[k] = quantizers[k]
+
+        for p in pertoken_match:
+            if p in k:
+                pertokenquant[k] = quantizers[k]
+
+    # default arg of KVQuant
+    nf_nuq=False
+    norm=False
+    cap_outliers=-1
+    clamp=False
+
+    #per-vector quant for qllm
+    make_quant_sim_qllm(
+        model,
+        perchannelquant,
+        kv_bits,
+        perchannel=True,
+        include_sparse=include_sparse,
+        sparsity_threshold=sparsity_threshold,
+        dynamicquantization=False,
+        nuq=nuq,
+        nf_nuq=nf_nuq,
+        norm=norm,
+        cap_outliers=cap_outliers,
+        first_few_fp16=first_few_fp16,
+        clamp=clamp
+    )
+
+    #per-vector quant for qllm
+    make_quant_sim_qllm(
+        model,
+        pertokenquant,
+        kv_bits,
+        perchannel=False,
+        include_sparse=include_sparse,
+        sparsity_threshold=sparsity_threshold,
+        dynamicquantization=True,
+        nuq=nuq,
+        nf_nuq=nf_nuq,
+        norm=norm,
+        cap_outliers=cap_outliers,
+        first_few_fp16=first_few_fp16,
+        clamp=clamp
+    )
+    
+    return model
+
 def get_model(model, seqlen, maxseqlen, dev):
     import torch
     def skip(*args, **kwargs):
