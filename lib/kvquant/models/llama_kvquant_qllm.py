@@ -818,7 +818,7 @@ class LlamaDecoderLayer(nn.Module):
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
-        prefill_with_quant: Optional[bool] = True,
+        prefill_with_quant: Optional[bool] = False,
         **kwargs,
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
@@ -1034,7 +1034,7 @@ class LlamaModel(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        prefill_with_quant: Optional[bool] = True
+        prefill_with_quant: Optional[bool] = False
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1200,7 +1200,7 @@ class LlamaForCausalLM_KVQuant(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-        prefill_with_quant: Optional[bool] = True
+        prefill_with_quant: Optional[bool] = False
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:

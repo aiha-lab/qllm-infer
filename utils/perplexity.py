@@ -31,24 +31,13 @@ def eval_ppl(model, tokenizer, args,
         for ii in progress:
             input = input_tok[ii, :].cuda().view(1, -1)
             
-            if args.kivi:
+            if args.kivi or args.kvquant:
+                # Prefill with quantized KV cache
                 output = model(input,
                             use_cache=False,
                             output_hidden_states=False,
                             output_attentions=False,
-                            # Prefill with quantized KV cache or FP16 KV cache
-                            prefill_with_quant=args.kivi_prefill_with_quant
-                            )[0]            
-            
-            elif args.kvquant:
-                output = model(input,
-                            use_cache=False,
-                            output_hidden_states=False,
-                            output_attentions=False,
-                            # Prefill with quantized KV cache or FP16 KV cache
-                            prefill_with_quant=args.kvquant_prefill_with_quant
-                            )[0] 
-            
+                            prefill_with_quant=True)[0]
             else:
                 output = model(input,
                             use_cache=False,

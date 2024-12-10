@@ -21,7 +21,7 @@ import math
 import argparse
 
 # qllm
-def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq, include_sparse, sparsity_threshold, first_few_fp16, causalllm):
+def get_modified_model_qllm(model_path, quantizer_path, use_flash, kv_bits, nuq, include_sparse, sparsity_threshold, first_few_fp16, causalllm):
     import torch
     def skip(*args, **kwargs):
         pass
@@ -35,12 +35,12 @@ def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq,
     # load vanila model
     model = causalllm.from_pretrained(
         pretrained_model_name_or_path=model_path,
-        config=config,
-        cache_dir=cache_dir,
         torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        use_flash_attention_2=use_flash,
         device_map="auto",
-        use_flash_attention_2=True
-    ).eval()
+        config=config
+    )
 
     # load quantizer
     with open(quantizer_path, 'rb') as handle:
@@ -49,7 +49,6 @@ def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq,
     # replace K Proj and V Proj
     perchannelquant = {}
     pertokenquant = {}
-
     perchannel_match = ["k_proj"]
     pertoken_match = ["v_proj"]
 
@@ -69,7 +68,7 @@ def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq,
     cap_outliers=-1
     clamp=False
 
-    #per-vector quant for qllm
+    # K Proj activation quantization (per-channel)
     make_quant_sim_qllm(
         model,
         perchannelquant,
@@ -86,7 +85,7 @@ def get_modified_model_qllm(model_path, quantizer_path, cache_dir, kv_bits, nuq,
         clamp=clamp
     )
 
-    #per-vector quant for qllm
+    # V Proj activation quantization (per-token)
     make_quant_sim_qllm(
         model,
         pertokenquant,
