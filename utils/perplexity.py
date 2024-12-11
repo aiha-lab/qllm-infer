@@ -30,20 +30,10 @@ def eval_ppl(model, tokenizer, args,
         progress = tqdm(range(nsamples))
         for ii in progress:
             input = input_tok[ii, :].cuda().view(1, -1)
-            
-            if args.kivi or args.kvquant:
-                # Prefill with quantized KV cache
-                output = model(input,
-                            use_cache=False,
-                            output_hidden_states=False,
-                            output_attentions=False,
-                            prefill_with_quant=True)[0]
-            else:
-                output = model(input,
-                            use_cache=False,
-                            output_hidden_states=False,
-                            output_attentions=False)[0]
-            
+            output = model(input,
+                        use_cache=False,
+                        output_hidden_states=False,
+                        output_attentions=False)[0]
             shift_logits = output[:, :-1, :].contiguous()
             shift_labels = input[:, 1:]
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)),

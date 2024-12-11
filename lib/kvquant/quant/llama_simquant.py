@@ -21,7 +21,7 @@ import math
 import argparse
 
 # qllm
-def get_modified_model_qllm(model_path, quantizer_path, use_flash, kv_bits, nuq, include_sparse, sparsity_threshold, first_few_fp16, causalllm):
+def get_modified_model_qllm(model_path, quantizer_path, use_flash, prefill_with_quant, kv_bits, nuq, include_sparse, sparsity_threshold, first_few_fp16, causalllm):
     import torch
     def skip(*args, **kwargs):
         pass
@@ -31,7 +31,8 @@ def get_modified_model_qllm(model_path, quantizer_path, use_flash, kv_bits, nuq,
 
     from transformers import AutoConfig
     config = AutoConfig.from_pretrained(model_path)
-
+    config.prefill_with_quant = prefill_with_quant
+    
     # load vanila model
     model = causalllm.from_pretrained(
         pretrained_model_name_or_path=model_path,

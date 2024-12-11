@@ -1168,6 +1168,8 @@ class LlamaForCausalLM_KVQuant(LlamaPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+        self.prefill_with_quant = config.prefill_with_quant
+
     def get_input_embeddings(self):
         return self.model.embed_tokens
 
@@ -1199,8 +1201,7 @@ class LlamaForCausalLM_KVQuant(LlamaPreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        prefill_with_quant: Optional[bool] = False
+        return_dict: Optional[bool] = None
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -1244,7 +1245,7 @@ class LlamaForCausalLM_KVQuant(LlamaPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            prefill_with_quant=prefill_with_quant
+            prefill_with_quant=self.prefill_with_quant
         )
 
         hidden_states = outputs[0]

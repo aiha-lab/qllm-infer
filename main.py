@@ -11,10 +11,10 @@ logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-import debugpy
-debugpy.listen(("0.0.0.0", 5678))
-print("\n********** Waiting for debugger **********\n")
-debugpy.wait_for_client()
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))
+# print("\n********** Waiting for debugger **********\n")
+# debugpy.wait_for_client()
 
 
 def main(args):
@@ -49,8 +49,12 @@ def main(args):
         add_act_quant(model, args)
 
     # KV Cache Quantization
-    # KIVI: load modified model
+    # KIVI
     if args.kivi:
+        # delete Vanila model
+        del model
+        torch.cuda.empty_cache()
+        
         print("\n********** KV Cache Quantization: KIVI **********\n")
 
         from lib.kivi.models.llama_kivi_qllm import LlamaForCausalLM_KIVI
@@ -63,8 +67,10 @@ def main(args):
         config.v_bits = args.kivi_v_bits
         config.group_size = args.kivi_group_size
         config.residual_length = args.kivi_residual_length
+        config.prefill_with_quant = args.kivi_prefill_with_quant
         config.use_flash = True # for FlashAttention-2
 
+        # load modified model
         model = LlamaForCausalLM_KIVI.from_pretrained(
             pretrained_model_name_or_path=args.model_path,
             torch_dtype=torch.float16,
@@ -73,8 +79,12 @@ def main(args):
             config=config,
         )
 
-    # KVQuant: load modifed model
+    # KVQuant
     if args.kvquant:
+        # delete Vanila model
+        del model
+        torch.cuda.empty_cache()
+        
         print("\n********** KV Cache Quantization: KVQuant **********\n")
         
         from lib.kvquant.models.llama_kvquant_qllm import LlamaForCausalLM_KVQuant
@@ -83,10 +93,12 @@ def main(args):
         # load quantized model        
         quantizer_path = "lib/kvquant/quant/quantizers/quantizers_{}_{}bits.pickle".format(args.model_path.split('/')[-1], args.kvquant_kv_bits)
         use_flash = True # for FlashAttention-2
-
+        
+        # load modified model
         model = get_modified_model_qllm(
             args.model_path, quantizer_path, use_flash,
-            args.kvquant_kv_bits, args.kvquant_nuq, args.kvquant_include_sparse, 
+            args.kvquant_prefill_with_quant, args.kvquant_kv_bits, 
+            args.kvquant_nuq, args.kvquant_include_sparse, 
             args.kvquant_sparsity_threshold, args.kvquant_first_few_fp16,
             LlamaForCausalLM_KVQuant
         )
@@ -101,12 +113,15 @@ def main(args):
         stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
         return
 
-    # Inference (Chatbot, Perplexity, LM-Eval)
+    # Inference (Chatbot, NIAH, Perplexity, LM-Eval)
     ppls = dict()
     results = dict()
     if args.chat:
         from utils.chatbot import chatbot_play
-        chatbot_play(model, tokenizer, max_new_tokens=128, device='cuda')
+        chatbot_play(model, tokenizer, max_new_tokens=512, device='cuda')
+    if args.niah:
+        from utils.needle_in_a_haystack.needle_in_a_haystack_example import niah_example
+        niah_example(model, tokenizer)
     if args.eval_ppl:
         from utils.perplexity import eval_ppl
         ppls = eval_ppl(model.cuda(), tokenizer, args)
@@ -177,6 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--kivi_v_bits', type=int, default=4)
     parser.add_argument('--kivi_group_size', type=int, default=32)
     parser.add_argument('--kivi_residual_length', type=int, default=128)
+    parser.add_argument('--kivi_prefill_with_quant', type=str2bool, default=False)    
     # KVQuant Configs
     parser.add_argument('--kvquant', type=str2bool, default=False)
     parser.add_argument('--kvquant_kv_bits', type=int, default=4)
@@ -184,8 +200,10 @@ if __name__ == '__main__':
     parser.add_argument('--kvquant_include_sparse', type=str2bool, default=True)
     parser.add_argument('--kvquant_sparsity_threshold', type=float, default=0.99)
     parser.add_argument('--kvquant_first_few_fp16', type=int, default=1)
+    parser.add_argument('--kvquant_prefill_with_quant', type=str2bool, default=False)    
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
+    parser.add_argument('--niah', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')
     # Analysis Tools
     parser.add_argument('--analyze_stats', type=str2bool, default=False)

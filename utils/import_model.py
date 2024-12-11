@@ -14,6 +14,7 @@ def model_from_hf_path(path,
     model_str = path
 
     attn_implementation='eager'
+    # attn_implementation='flash_attention_2'
 
     if attn_implementation=='eager':
         logging.warning("Using attn_implmentation='eager' disables SdpaAttention and FlashAttention")
