@@ -394,7 +394,7 @@ class LlamaAttention(nn.Module):
         else:
             query_states = self.q_proj(hidden_states)
 
-            # qllm: FP16 KV for Vanila Prefill Stage
+            # qllm: FP16 KV for Vanilla Prefill Stage
             key_states, key_states_fp16 = self.k_proj(hidden_states, prefill_with_quant)
             value_states, value_states_fp16 = self.v_proj(hidden_states, prefill_with_quant)
 
@@ -419,7 +419,7 @@ class LlamaAttention(nn.Module):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
 
-        # qllm: FP16 KV for Vanila Prefill Stage
+        # qllm: FP16 KV for Vanilla Prefill Stage
         if (not prefill_with_quant) and (q_len > 1):
     
             key_states = key_states_fp16.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
@@ -516,7 +516,7 @@ class LlamaFlashAttention2(LlamaAttention):
         query_states = self.q_proj(hidden_states)
 
 
-        # qllm: FP16 KV for Vanila Prefill Stage
+        # qllm: FP16 KV for Vanilla Prefill Stage
         key_states, key_states_fp16 = self.k_proj(hidden_states, prefill_with_quant)
         value_states, value_states_fp16 = self.v_proj(hidden_states, prefill_with_quant)
 
@@ -539,7 +539,7 @@ class LlamaFlashAttention2(LlamaAttention):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
 
-        # qllm: FP16 KV for Vanila Prefill Stage
+        # qllm: FP16 KV for Vanilla Prefill Stage
         if (not prefill_with_quant) and (q_len > 1):
     
             key_states = key_states_fp16.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
@@ -728,7 +728,7 @@ class LlamaSdpaAttention(LlamaAttention):
         query_states = self.q_proj(hidden_states)
 
 
-        # qllm: FP16 KV for Vanila Prefill Stage
+        # qllm: FP16 KV for Vanilla Prefill Stage
         key_states, key_states_fp16 = self.k_proj(hidden_states, prefill_with_quant)
         value_states, value_states_fp16 = self.v_proj(hidden_states, prefill_with_quant)
 
@@ -749,7 +749,7 @@ class LlamaSdpaAttention(LlamaAttention):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
 
-        # qllm: FP16 KV for Vanila Prefill Stage
+        # qllm: FP16 KV for Vanilla Prefill Stage
         if (not prefill_with_quant) and (q_len > 1):
     
             key_states = key_states_fp16.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)

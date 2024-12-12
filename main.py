@@ -11,12 +11,6 @@ logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-# import debugpy
-# debugpy.listen(("0.0.0.0", 5678))
-# print("\n********** Waiting for debugger **********\n")
-# debugpy.wait_for_client()
-
-
 def main(args):
     # Load Huggingface Model
     from utils.import_model import model_from_hf_path
@@ -51,7 +45,7 @@ def main(args):
     # KV Cache Quantization
     # KIVI
     if args.kivi:
-        # delete Vanila model
+        # delete Vanilla model
         del model
         torch.cuda.empty_cache()
         
@@ -59,8 +53,8 @@ def main(args):
 
         from lib.kivi.models.llama_kivi_qllm import LlamaForCausalLM_KIVI
 
-        # Support only INT2/INT4 Quantization of KV Cache
-        assert args.kivi_k_bits in [2, 4] and args.kivi_v_bits in [2, 4]
+        # Support only INT4/INT2 Quantization of KV Cache
+        assert args.kivi_k_bits in [4, 2] and args.kivi_v_bits in [4, 2]
 
         config = transformers.LlamaConfig.from_pretrained(args.model_path)
         config.k_bits = args.kivi_k_bits
@@ -81,7 +75,7 @@ def main(args):
 
     # KVQuant
     if args.kvquant:
-        # delete Vanila model
+        # delete Vanilla model
         del model
         torch.cuda.empty_cache()
         
@@ -90,8 +84,12 @@ def main(args):
         from lib.kvquant.models.llama_kvquant_qllm import LlamaForCausalLM_KVQuant
         from lib.kvquant.quant.llama_simquant import get_modified_model_qllm
 
-        # load quantized model        
-        quantizer_path = "lib/kvquant/quant/quantizers/quantizers_{}_{}bits.pickle".format(args.model_path.split('/')[-1], args.kvquant_kv_bits)
+        # Support only 4/3/2-Bit Quantization of KV Cache
+        assert args.kvquant_kv_bits in [4, 3, 2]
+
+        model_name = args.model_path.split('/')[-1]
+        quantizer_path = "lib/kvquant/quant/quantizers/"
+        quantizer_path += "quantizers_{}_{}bits.pickle".format(model_name, args.kvquant_kv_bits)
         use_flash = True # for FlashAttention-2
         
         # load modified model

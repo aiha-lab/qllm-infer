@@ -248,7 +248,7 @@ class LlamaAttention_KIVI(nn.Module):
                 repeated_value_states_quant_dequant = repeat_kv(value_states_quant_dequant, self.num_key_value_groups)
                 attn_output = torch.matmul(attn_weights, repeated_value_states_quant_dequant)            
         
-        # Vanila KIVI
+        # Vanilla KIVI
         else:
             if past_key_value is not None:
                 key_states_quant_trans = past_key_value[0]
@@ -737,7 +737,7 @@ class LlamaFlashAttention_KIVI(LlamaAttention_KIVI):
                     value_states_quant_dequant.transpose(1, 2), None, q_len, dropout=0.0
                 )
 
-            # Vanila KIVI
+            # Vanilla KIVI
             else:
                 # print(f"kivi with flash! {self.k_bits}")
                 input_dtype = query_states.dtype

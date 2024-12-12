@@ -33,7 +33,7 @@ def get_modified_model_qllm(model_path, quantizer_path, use_flash, prefill_with_
     config = AutoConfig.from_pretrained(model_path)
     config.prefill_with_quant = prefill_with_quant
     
-    # load vanila model
+    # load vanilla model
     model = causalllm.from_pretrained(
         pretrained_model_name_or_path=model_path,
         torch_dtype=torch.float16,

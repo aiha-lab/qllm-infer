@@ -14,8 +14,8 @@ tasks=none
 num_fewshot=none
 limit=none
 
-# eval_ppl=true
-eval_ppl=false
+eval_ppl=true
+# eval_ppl=false
 
 eval_ppl_seqlen=2048
 use_cuda_graph=true
@@ -42,17 +42,18 @@ gptq_true_sequential=false
 gptq_percdamp=0.01
 gptq_act_order=false
 gptq_static_groups=false
+
 # KIVI
 kivi=false
-kivi_prefill_with_quant=false
-kivi_k_bits=2 # 4, 2
-kivi_v_bits=2 # 4, 2
+kivi_prefill_with_quant=true
+kivi_k_bits=4 # 4, 2
+kivi_v_bits=4 # 4, 2
 kivi_group_size=32
 kivi_residual_length=128
 # KVQuant
-kvquant=true
-kvquant_prefill_with_quant=false
-kvquant_kv_bits=2 # 4, 3, 2
+kvquant=false
+kvquant_prefill_with_quant=true
+kvquant_kv_bits=4 # 4, 3, 2
 kvquant_nuq=true
 kvquant_include_sparse=true
 kvquant_sparsity_threshold=0.99
@@ -82,10 +83,8 @@ fi
 
 # Chatbot Simulation
 chat=false
-# chat=true
 # Needle-In-A-Haystack Task Example
-# niah=false
-niah=true
+niah=false
 # Log
 logfile='logs/out.txt'
 # Analysis Tools
