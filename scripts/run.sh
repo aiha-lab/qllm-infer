@@ -7,8 +7,8 @@ DEVICES=$1
 model_path=$2
 cache_dir='./cache'
 
-# tasks='boolq,arc_challenge,arc_easy,hellaswag,piqa,winogrande,mmlu'
-# tasks='gsm8k,truthfulqa'
+# tasks='boolq,arc_challenge,arc_easy,hellaswag,piqa,winogrande,mmlu' # pefill only
+# tasks='gsm8k,truthfulqa' # prefill and decoding
 tasks=none
 
 num_fewshot=none
