@@ -116,7 +116,7 @@ def main(args):
     results = dict()
     if args.chat:
         from utils.chatbot import chatbot_play
-        chatbot_play(model, tokenizer, max_new_tokens=512, device='cuda')
+        chatbot_play(model, tokenizer, max_new_tokens=128, device='cuda')
     if args.niah:
         from utils.needle_in_a_haystack.needle_in_a_haystack_example import niah_example
         niah_example(model, tokenizer)
