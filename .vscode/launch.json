@@ -1,0 +1,62 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug test.sh Equivalent",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "3"
+            },
+            "justMyCode": false,
+            "args": [
+                "--model_path", "/raid/LLM/opt-125m",
+                "--cache_dir", "./cache",
+                "--tasks", "none",
+                "--num_fewshot", "none",
+                "--limit", "none",
+                "--eval_ppl", "true",
+                "--eval_ppl_seqlen", "2048",
+                "--use_cuda_graph", "true",
+                "--seed", "0",
+                "--bits_a", "16",
+                "--sym_a", "false",
+                "--groupsize_a", "-1",
+                "--bits_w", "4",
+                "--sym_w", "false",
+                "--groupsize_w", "-1",
+                "--smoothquant", "false",
+                "--smoothquant_alpha", "0.5",
+                "--smoothquant_dataset", "pile",
+                "--smoothquant_nsamples", "512",
+                "--smoothquant_seqlen", "512",
+                "--gptq", "false",
+                "--gptq_dataset", "c4",
+                "--gptq_nsamples", "128",
+                "--gptq_seqlen", "2048",
+                "--gptq_true_sequential", "false",
+                "--gptq_percdamp", "0.01",
+                "--gptq_act_order", "true",
+                "--gptq_static_groups", "false",
+                "--spqr", "true",
+                "--spqr_qq_scale_bits", "4",
+                "--spqr_qq_zero_bits", "4",
+                "--spqr_qq_zero_sym", "false",
+                "--spqr_qq_groupsize", "16",
+                "--spqr_outlier_threshold", "0.2",
+                "--spqr_simplified_outliers", "false",
+                "--spqr_offload_activation", "false",
+                "--spqr_load", "cache/spqr",
+                "--spqr_save", "cache/spqr",
+                "--spqr_skip_out_loss", "true",
+                "--chat", "false",
+                "--logfile", "logs/out.txt",
+                "--analyze_stats", "false",
+                "--stats_csv_path", "cache/opt-125m-w4g16a16g-1-spqr.csv",
+                "--get_layerwise_distance", "false"
+            ]
+        }
+    ]
+}

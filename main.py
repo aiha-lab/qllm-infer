@@ -7,6 +7,7 @@ import logging
 import transformers
 import warnings
 import torch
+import pandas as pd
 logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
@@ -32,9 +33,11 @@ def main(args):
 
     # Quantization
     if args.bits_w < 16:
-        from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
+        from lib.quantization.weight_quant import quantize_gptq, quantize_spqr, quantize_nearest
         if args.gptq:
             quantize_gptq(model, args, dev='cuda')
+        elif args.spqr:
+            quantize_spqr(model, args, dev='cuda')
         else:
             quantize_nearest(model, args, dev='cuda')
     if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
@@ -49,6 +52,11 @@ def main(args):
     if args.get_layerwise_distance:
         from utils.statistics import get_layerwise_distance
         stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
+        if args.logfile != 'none':
+            import json
+            with open(args.logfile, 'a') as file:
+                file.write(json.dumps(vars(args), indent=4) + '\n')
+                file.write(json.dumps(stats, indent=4) + '\n')
         return
 
     # Inference (Chatbot, Perplexity, LM-Eval)
@@ -121,6 +129,18 @@ if __name__ == '__main__':
     parser.add_argument('--gptq_percdamp', type=float, default=.01)
     parser.add_argument('--gptq_act_order', type=str2bool, default=False)
     parser.add_argument('--gptq_static_groups', type=str2bool, default=False)
+    # SpQR Configs
+    parser.add_argument('--spqr', type=str2bool, default=False)
+    parser.add_argument('--spqr_qq_scale_bits', type=int, default=4)
+    parser.add_argument('--spqr_qq_zero_bits', type=int, default=4)
+    parser.add_argument('--spqr_qq_zero_sym', type=str2bool, default=False)
+    parser.add_argument('--spqr_qq_groupsize', type=int, default=16)
+    parser.add_argument('--spqr_outlier_threshold', type=float, default=float("inf"))
+    parser.add_argument('--spqr_simplified_outliers', type=str2bool, default=False)
+    parser.add_argument('--spqr_offload_activations', type=str2bool, default=False)
+    parser.add_argument('--spqr_load', type=str, default='./cache/spqr')
+    parser.add_argument('--spqr_save', type=str, default='./cache/spqr')
+    parser.add_argument('--spqr_skip_out_loss', type=str2bool, default=False)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')
