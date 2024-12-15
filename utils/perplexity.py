@@ -14,14 +14,19 @@ def eval_ppl(model, tokenizer, args,
     results = dict()
 
     for dataset in datasets:
+        nsamples = None
         input_tok = data_utils.get_test_tokens(dataset,
                         seed=args.seed,
                         seqlen=args.eval_ppl_seqlen,
                         model=args.model_path,
                         cache_dir=args.cache_dir,
                     )
+        #logging.info(f'{input_tok.numel()=}')
+        #logging.info(f'{nsamples=}')
         if nsamples is None:
             nsamples = input_tok.numel() // args.eval_ppl_seqlen
+            
+        #logging.info(f'After nsample = {nsamples}')
         input_tok = input_tok[0, :(args.eval_ppl_seqlen * nsamples)].view(
             nsamples, args.eval_ppl_seqlen)
 
