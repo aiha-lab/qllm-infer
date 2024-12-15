@@ -280,7 +280,7 @@ def get_average_number_of_bits(
 @torch.no_grad()
 def get_inps(model, data_iterable, args, dev, nsamples=None):
     """mocks model launch to collect inputs to the first model layer"""
-    logging.info("catching inputs from data", flush=True)
+    logging.info("catching inputs from data")
     from lib.spqr.modelutils import get_layers
     layers = get_layers(model)
 
@@ -363,7 +363,7 @@ def spqr_sequential(model, dataloader, args, dev):
     
     # get_inps in SpQR
     """mocks model launch to collect inputs to the first model layer"""
-    logging.info("catching inputs from data", flush=True)
+    logging.info("catching inputs from data")
     
     dtype = next(iter(model.parameters())).dtype
     inps = torch.zeros(
