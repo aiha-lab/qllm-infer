@@ -280,7 +280,7 @@ def get_average_number_of_bits(
 @torch.no_grad()
 def get_inps(model, data_iterable, args, dev, nsamples=None):
     """mocks model launch to collect inputs to the first model layer"""
-    print("catching inputs from data", flush=True)
+    logging.info("catching inputs from data", flush=True)
     from lib.spqr.modelutils import get_layers
     layers = get_layers(model)
 
@@ -359,11 +359,11 @@ def get_inps(model, data_iterable, args, dev, nsamples=None):
 
 @torch.no_grad()
 def spqr_sequential(model, dataloader, args, dev):
-    print("\nStarting SPQR quantization ...")
+    logging.info("\nStarting SPQR quantization ...")
     
     # get_inps in SpQR
     """mocks model launch to collect inputs to the first model layer"""
-    print("catching inputs from data", flush=True)
+    logging.info("catching inputs from data", flush=True)
     
     dtype = next(iter(model.parameters())).dtype
     inps = torch.zeros(
@@ -383,13 +383,13 @@ def spqr_sequential(model, dataloader, args, dev):
 
     layers = get_layers(model)
     for i in range(len(layers)):
-        print(f"\n---------------- Layer {i} of {len(layers)} ----------------")
+        logging.info(f"\n---------------- Layer {i} of {len(layers)} ----------------")
         normal_outlier_count, w_count = 0, 0
         stats_payload = {}
         start_time = time.time()
 
         layer_dev_original = next(layers[i].parameters()).device  # quantized layer will return there
-        print(f"{layer_dev_original=}")
+        logging.info(f"{layer_dev_original=}")
         if layer_dev_original.type != "cuda":
             layer = layers[i].to(dev)
         else:
@@ -432,7 +432,7 @@ def spqr_sequential(model, dataloader, args, dev):
             torch.cuda.empty_cache()
 
             for sublayer_name in subset:
-                print(f"Quantizing module {sublayer_name} of layer {i}")
+                logging.info(f"Quantizing module {sublayer_name} of layer {i}")
                 quantized = spqr_handlers[sublayer_name].quantize(
                     percdamp=args.gptq_percdamp,
                     bits=args.bits_w,
@@ -502,10 +502,10 @@ def spqr_sequential(model, dataloader, args, dev):
         normal_outlier_count_global += normal_outlier_count
         w_count_global += w_count
 
-        print(stats_payload)
+        logging.info(stats_payload)
 
-    print("=====================\nFinal stats:")
-    print(f"global_ol_share:  {normal_outlier_count_global / w_count_global:.3%}")
+    logging.info("=====================\nFinal stats:")
+    logging.info(f"global_ol_share:  {normal_outlier_count_global / w_count_global:.3%}")
 
 
     wbits_avg = get_average_number_of_bits(
@@ -532,19 +532,20 @@ def spqr_sequential(model, dataloader, args, dev):
         torch.save(not_quantized_weights, save + "/not_quantized_weights.pt")
 
     model.config.use_cache = use_cache
-    print(f"quantize: {torch.cuda.max_memory_allocated()=:,}")
+    logging.info(f"quantize: {torch.cuda.max_memory_allocated()=:,}")
     return quantizers, wbits_avg
 
 def quantize_spqr(model, args, dev):
     from utils.data_utils import get_loaders
-    print("Loading data ...")
+    logging.info("Loading data ...")
     dataloader = get_loaders(
         args.gptq_dataset, nsamples=args.gptq_nsamples,
         seed=args.seed, model=args.model_path,
         seqlen=args.gptq_seqlen, cache_dir=args.cache_dir,
     )
-    results = spqr_sequential(model, dataloader, args, dev)
-    return results
+    quantizer, wbits_avg = spqr_sequential(model, dataloader, args, dev)
+    logging.info(f'{wbits_avg=}')
+    return quantizer
 
 
 def quantize_nearest(model, args, dev):
