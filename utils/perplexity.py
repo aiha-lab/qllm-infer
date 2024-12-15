@@ -5,7 +5,7 @@ import logging
 from tqdm import tqdm
 
 def eval_ppl(model, tokenizer, args,
-             nsamples=None, datasets=['wikitext2','c4'],
+             nsamples=None, datasets=['wikitext2','c4', 'ptb'],
             ):
     torch.set_grad_enabled(False)
     random.seed(args.seed)
