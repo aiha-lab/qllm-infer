@@ -314,11 +314,13 @@ def get_inps(model, data_iterable, args, dev, nsamples=None):
     forward_arg_names = [
         "attention_mask",
     ]
-    from lib.spqr.modelutils import FALCON_TYPES
+    from lib.spqr.modelutils import FALCON_TYPES, LLAMA_LIKE
     if model.config.model_type.lower() in FALCON_TYPES:
         forward_arg_names.append("alibi")
-
-    cache = {"i": 0, "attention_mask": None, "alibi": None}
+    elif model.config.model_type.lower() in LLAMA_LIKE:
+        forward_arg_names.append("position_ids")
+        
+    cache = {"i": 0, "attention_mask": None, "position_ids": None, "alibi": None}
 
     class Catcher(nn.Module):
         def __init__(self, module):
@@ -423,7 +425,10 @@ def spqr_sequential(model, dataloader, args, dev):
             for sublayer_name in subset:
                 handles.append(subset[sublayer_name].register_forward_hook(add_batch(sublayer_name)))
             for j in range(args.gptq_nsamples):
-                outs[j] = layer(inps[j].unsqueeze(0), attention_mask=forward_args['attention_mask'])[0]
+                if 'llama' in args.model_path:
+                    outs[j] = layer(inps[j].unsqueeze(0), attention_mask=forward_args['attention_mask'], position_ids=forward_args['position_ids'])[0]
+                elif 'opt' in args.model_path:
+                    outs[j] = layer(inps[j].unsqueeze(0), attention_mask=forward_args['attention_mask'])[0]
                 #if args.spqr_offload_activations:
                 #    outs[j] = outs[j].cpu()
             for h in handles:
@@ -469,7 +474,10 @@ def spqr_sequential(model, dataloader, args, dev):
 
         out_losses = []
         for j in range(args.gptq_nsamples):
-            outs_batch = layer(inps[j].to(layer_dev).unsqueeze(0), **forward_args)[0]
+            if 'llama' in args.model_path:
+                outs_batch = layer(inps[j].unsqueeze(0), attention_mask=forward_args['attention_mask'], position_ids=forward_args['position_ids'])[0]
+            elif 'opt' in args.model_path:
+                outs_batch = layer(inps[j].unsqueeze(0), attention_mask=forward_args['attention_mask'])[0]
             if not args.spqr_skip_out_loss:
                 outs_batch_loss = (
                     (outs_batch - outs[j].to(layer_dev))

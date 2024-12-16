@@ -221,7 +221,9 @@ def get_test_tokens(name, seed=0, seqlen=2048, model='', cache_dir='cache'):
         elif name == 'c4_new':
             testset = get_c4_new(train_samples, seed, seqlen, model)[1].input_ids
         elif name == 'ptb':
-            testset = get_ptb(train_samples, seed, seqlen, model)[1].input_ids
+            testset = get_ptb(train_samples, seed, seqlen, model)[1]['input_ids']
+        elif name == 'ptb_new':
+            testset = get_ptb_new(train_samples, seed, seqlen, model)[1]['input_ids']
         else:
             raise Exception
         torch.save(testset, possible_path)
