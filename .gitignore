@@ -3,8 +3,6 @@ __pycache__/
 *.swp
 logs/*
 
-
-kv_quantization/
 .vscode/
 .favorites.json
 
