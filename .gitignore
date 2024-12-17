@@ -6,3 +6,5 @@ logs/*
 *.ipynb
 *.out
 lm-evaluation-harness/*
+.vscode/*
+nohup_logs/*
