@@ -15,7 +15,7 @@ echo "Model Name: $model_name"
 
 cache_dir='./cache'
 # lm_eval arguments
-tasks=none
+#tasks=none
 num_fewshot=none
 limit=none
 
@@ -58,35 +58,31 @@ spqr_skip_out_loss=true
 if [ "$algorithm" = "gptq" ]; then
     logfile='logs/'$algorithm'-'$model_name'-w'$bits_w'g'$groupsize_w'.txt'
 elif [ "$algorithm" = "spqr" ]; then
-    logfile='logs/'$algorithm'-'$model_name'-w'$bits_w'g'$groupsize_w'.txt'
+    logfile='logs/'$algorithm'-'$model_name'-w'$bits_w'g'$groupsize_w'th'$spqr_outlier_threshold'.txt'
 else
     logfile='logs/rtn-'$model_name'-w'$bits_w'g'$groupsize_w'.txt'
 fi
 
-if [ "$run_task" = "eval_ppl" ]; then
+if [ "$run_task" = "evaluate" ]; then
     eval_ppl=true
     chat=false
-    analyze_stats=false
-    get_layerwise_distance=false
-elif [ "$run_task" = "chat" ]; then
-    eval_ppl=false
-    chat=true
-    analyze_stats=false
-    get_layerwise_distance=false
-elif [ "$run_task" = "analyze_stats" ]; then
-    eval_ppl=false
-    chat=false
-    analyze_stats=true
-    get_layerwise_distance=false
-elif [ "$run_task" = "get_layerwise_distance" ]; then
-    eval_ppl=false
-    chat=false
-    analyze_stats=false
+    tasks='boolq,arc_challenge,arc_easy,hellaswag,piqa,winogrande,mmlu' # pefill only
     get_layerwise_distance=true
+    analyze_stats=false
+elif [ "$run_task" = "analyze" ]; then
+    eval_ppl=false
+    chat=false
+    tasks=none
+    get_layerwise_distance=false
+    analyze_stats=true
 fi
 
 eval_ppl_seqlen=2048
-stats_csv_path='cache/'$model_name'-w'$bits_w'g'$groupsize_w'-a'$bits_a'g'$groupsize_a'-'$algorithm'.csv'
+if [ "$algorithm" = "spqr" ]; then
+    stats_csv_path='cache/'$model_name'-w'$bits_w'g'$groupsize_w'th'$spqr_outlier_threshold'-'$algorithm'.csv'
+else
+    stats_csv_path='cache/'$model_name'-w'$bits_w'g'$groupsize_w'-'$algorithm'.csv'
+fi
 
 # diff bits_w, groupsize_w, algorithm
 if [ "$algorithm" = "gptq" ]; then

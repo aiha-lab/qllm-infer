@@ -5,3 +5,4 @@ logs/*
 *.log
 *.ipynb
 *.out
+lm-evaluation-harness/*

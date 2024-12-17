@@ -40,24 +40,6 @@ def main(args):
             quantize_spqr(model, args, dev='cuda')
         else:
             quantize_nearest(model, args, dev='cuda')
-    if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
-        from lib.quantization.act_quant import add_act_quant
-        add_act_quant(model, args)
-
-    # Analysis Tool
-    if args.analyze_stats:
-        from utils.statistics import summarize_stats
-        stats = summarize_stats(model, tokenizer, fp_state_dict, args)
-        return
-    if args.get_layerwise_distance:
-        from utils.statistics import get_layerwise_distance
-        stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
-        if args.logfile != 'none':
-            import json
-            with open(args.logfile, 'a') as file:
-                file.write(json.dumps(vars(args), indent=4) + '\n')
-                file.write(json.dumps(stats, indent=4) + '\n')
-        return
 
     # Inference (Chatbot, Perplexity, LM-Eval)
     ppls = dict()
@@ -83,6 +65,25 @@ def main(args):
             limit=args.limit,
         )['results']
         logging.info(results)
+
+    if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
+        from lib.quantization.act_quant import add_act_quant
+        add_act_quant(model, args)
+        
+    # Analysis Tool
+    if args.analyze_stats:
+        from utils.statistics import summarize_stats
+        stats = summarize_stats(model, tokenizer, fp_state_dict, args)
+        return
+    if args.get_layerwise_distance:
+        from utils.statistics import get_layerwise_distance
+        stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
+        if args.logfile != 'none':
+            import json
+            with open(args.logfile, 'a') as file:
+                file.write(json.dumps(vars(args), indent=4) + '\n')
+                file.write(json.dumps(stats, indent=4) + '\n')
+        return
 
     if args.logfile != 'none':
         import json

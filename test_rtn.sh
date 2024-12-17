@@ -1,0 +1,2 @@
+nohup sh scripts/test_renew.sh 1 /raid/LLM/llama3.1-8b-instruct rtn 4 -1 evaluate > rtn-w4g-1-llama3-instruct-evaluate.log 2>&1 &&
+nohup sh scripts/test_renew.sh 1 /raid/LLM/llama3.1-8b-instruct rtn 4 -1 analyze > rtn-w4g-1-llama3-instruct-analyze.log 2>&1

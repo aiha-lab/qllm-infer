@@ -1,0 +1,2 @@
+nohup sh scripts/test_renew.sh 2 /raid/LLM/llama3.1-8b-instruct spqr 3 16 evaluate > spqr-w3g16th25-llama3-instruct-evaluate.log 2>&1 &&
+nohup sh scripts/test_renew.sh 3 /raid/LLM/llama3.1-8b-instruct spqr 3 16 analyze > spqr-w3g16th25-llama3-instruct-analyze.log 2>&1

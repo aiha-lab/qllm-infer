@@ -1,0 +1,2 @@
+nohup sh scripts/test_renew.sh 2 /raid/LLM/llama3.1-8b-instruct gptq 4 -1 evaluate > gptq-w4g-1-llama3-instruct-evaluate.log 2>&1 &&
+nohup sh scripts/test_renew.sh 2 /raid/LLM/llama3.1-8b-instruct gptq 4 -1 analyze > gptq-w4g-1-llama3-instruct-analyze.log 2>&1
