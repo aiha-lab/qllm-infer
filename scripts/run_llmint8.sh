@@ -23,7 +23,7 @@ bits_w=8
 sym_w=false
 groupsize_w=-1
 #llm.int8()
-llm_int8=false
+llm_int8=true
 # SmoothQuant
 smoothquant=false
 smoothquant_alpha=0.5
