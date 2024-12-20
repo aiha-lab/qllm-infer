@@ -47,6 +47,7 @@ lm_eval/models/utils.py
 lm_eval/models/vllm_causallms.py
 lm_eval/prompts/__init__.py
 lm_eval/tasks/__init__.py
+lm_eval/tasks/__pycache__/__init__.cpython-310.pyc
 lm_eval/tasks/aclue/README.md
 lm_eval/tasks/aclue/_default_template_yaml
 lm_eval/tasks/aclue/_generate_configs.py
@@ -1097,6 +1098,7 @@ lm_eval/tasks/headqa/headqa_es.yaml
 lm_eval/tasks/hellaswag/README.md
 lm_eval/tasks/hellaswag/hellaswag.yaml
 lm_eval/tasks/hellaswag/utils.py
+lm_eval/tasks/hellaswag/__pycache__/utils.cpython-310.pyc
 lm_eval/tasks/hendrycks_ethics/README.md
 lm_eval/tasks/hendrycks_ethics/commonsense.yaml
 lm_eval/tasks/hendrycks_ethics/deontology.yaml
@@ -2186,6 +2188,7 @@ lm_eval/tasks/wikitext/wikitext.yaml
 lm_eval/tasks/winogrande/README.md
 lm_eval/tasks/winogrande/default.yaml
 lm_eval/tasks/winogrande/preprocess_winogrande.py
+lm_eval/tasks/winogrande/__pycache__/preprocess_winogrande.cpython-310.pyc
 lm_eval/tasks/wmdp/README.md
 lm_eval/tasks/wmdp/_default_template_yaml
 lm_eval/tasks/wmdp/wmdp_bio.yaml

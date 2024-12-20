@@ -36,14 +36,29 @@ def print_rank(args):
         if args.local_rank <= 0:
             print(msg)
     return _print_rank_0
+# def to_device(batch, device):
+#     output = {}
+#     for k, v in batch.items():
+#         try:
+#             output[k] = v.to(device)
+#         except:
+#             output[k] = v
+#     return output
+
 def to_device(batch, device):
-    output = {}
-    for k, v in batch.items():
-        try:
-            output[k] = v.to(device)
-        except:
-            output[k] = v
-    return output
+    """
+    Move a batch of data to the specified device.
+    Handles nested structures such as dictionaries, lists, tuples, and tensors.
+    """
+    if isinstance(batch, dict):
+        return {k: to_device(v, device) for k, v in batch.items()}
+    elif isinstance(batch, (list, tuple)):
+        return type(batch)(to_device(v, device) for v in batch)  # Preserve the type (list/tuple)
+    elif isinstance(batch, torch.Tensor):
+        return batch.to(device)
+    else:
+        # If the item is not a tensor or collection, return as is
+        return batch
 
 def check_and_identify_compresssion(args, ds_config):
     assert args.per_device_train_batch_size == ds_config["train_micro_batch_size_per_gpu"]

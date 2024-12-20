@@ -6,11 +6,12 @@ export HF_DATASETS_TRUST_REMOTE_CODE=1
 DEVICES=$1
 model_path=$2
 cache_dir='./cache'
+tasks=none
 # tasks=boolq,arc_challenge,arc_easy,hellaswag,piqa,winogrande,mmlu
-tasks=arc_challenge,arc_easy,hellaswag,piqa,winogrande,mmlu
+# tasks=boolq,piqa,winogrande
 num_fewshot=none
 limit=none
-eval_ppl=true
+eval_ppl=false
 eval_ppl_seqlen=2048
 use_cuda_graph=true
 seed=0
@@ -38,15 +39,15 @@ gptq_act_order=false
 gptq_static_groups=false
 # ZeroQuant
 zeroquant=true
-zeroquant_lkd=false
-zeroquant_config='./zeroquant_config1.json'
+zeroquant_lkd=true
+# zeroquant_config='zeroquant_config.json'
 # Chatbot Simulation
-chat=false
+chat=true
 # Log
 logfile='logs/out.txt'
 # Analysis Tools
-analyze_stats=true
-stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
+analyze_stats=false
+stats_csv_path='cache/llama3.1-8b-instruct-w8a8zq.csv'
 get_layerwise_distance=false
 
 for bits_a in 8
@@ -57,7 +58,7 @@ for smoothquant in false
 do
 for gptq in false
 do
-MASTER_PORT=29501 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
+CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
     --cache_dir $cache_dir \
     --tasks $tasks \
@@ -88,7 +89,6 @@ MASTER_PORT=29501 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --gptq_static_groups $gptq_static_groups \
     --zeroquant $zeroquant \
     --zeroquant_lkd $zeroquant_lkd \
-    --zeroquant_config $zeroquant_config \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \

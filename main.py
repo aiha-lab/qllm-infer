@@ -31,10 +31,10 @@ def main(args):
                 fp_state_dict[name] = module.weight.data.cpu()
 
     # Quantization
-    args.zeroquant=True # FIXME
+    # args.zeroquant = True
     if args.zeroquant:
         from lib.zeroquant.get_zeroquant import get_zeroquant_model
-        get_zeroquant_model(model, tokenizer, device='cuda', args=args)
+        model = get_zeroquant_model(model, tokenizer, device='cuda', args=args)
     else:
         if args.bits_w < 16:
             from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
@@ -54,7 +54,7 @@ def main(args):
     if args.get_layerwise_distance:
         from utils.statistics import get_layerwise_distance
         stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
-        return
+        # return
 
     # Inference (Chatbot, Perplexity, LM-Eval)
     ppls = dict()
@@ -126,6 +126,10 @@ if __name__ == '__main__':
     parser.add_argument('--gptq_percdamp', type=float, default=.01)
     parser.add_argument('--gptq_act_order', type=str2bool, default=False)
     parser.add_argument('--gptq_static_groups', type=str2bool, default=False)
+    # ZeroQuant Configs
+    parser.add_argument('--zeroquant', type=str2bool, default=False)
+    parser.add_argument('--zeroquant_lkd', type=str2bool, default=False)
+    # parser.add_argument('--zeroquant_config', type=str, default='zeroquant_config.json')
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')

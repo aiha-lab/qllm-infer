@@ -5,7 +5,7 @@ from transformers import TextStreamer
 def generate(model, text, tokenizer, max_new_tokens, device):
     model_inputs = tokenizer([text], return_tensors="pt").to(device)
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-    
+    _ = model(model_inputs.input_ids)
     generated_ids = model.generate(
         model_inputs.input_ids,
         attention_mask=model_inputs['attention_mask'],
@@ -25,6 +25,7 @@ def generate(model, text, tokenizer, max_new_tokens, device):
 def chatbot_play(model, tokenizer, max_new_tokens, device='cuda'):
     logging.info('Start prompting, give a prompt as you want! (enter exit to close, c to continue to benchmark)')
     while True:
+        # prompt = "Imagine you are participating in a race with a group of people. If you have just overtaken the third person, what's your current position? Where is the person you just overtook?"
         prompt = input('User: ')
         if prompt=='c':
             logging.info('Exit')
@@ -36,7 +37,6 @@ def chatbot_play(model, tokenizer, max_new_tokens, device='cuda'):
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
         ]
-        
         text = tokenizer.apply_chat_template(
             messages,
             tokenize=False,

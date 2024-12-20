@@ -12,6 +12,10 @@ QLLM_PATH=${PWD}/qllm-infer
 docker run -it --rm --gpus all --ipc=host -v ${QLLM_PATH}:/root/qllm-infer -v /raid:/raid 166.104.35.43:5000/hwanii/pytorch2.1-cuda11.8:1.2 bash
 cd /root/qllm-infer && pip install -r requirements.txt
 cd /root/qllm-infer/lm-evaluation-harness && pip install -e . 
+
+## (Optional) For ZeroQuant
+## You can also modify the config file (./zeroquant_config.json)
+source ./zeroquant_setup.sh
 ```
 
 ### Quantize and Evaluate
