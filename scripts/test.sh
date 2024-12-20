@@ -14,12 +14,12 @@ eval_ppl_seqlen=2048
 use_cuda_graph=true
 seed=0
 # Quantization
-bits_a=8
+bits_a=16
 sym_a=false
 groupsize_a=-1
-bits_w=8
+bits_w=(4)
 sym_w=false
-groupsize_w=-1
+groupsize_w=(-1)
 # SmoothQuant
 smoothquant=false
 smoothquant_alpha=0.5
@@ -27,7 +27,7 @@ smoothquant_dataset=pile
 smoothquant_nsamples=512
 smoothquant_seqlen=512
 # GPTQ
-gptq=true
+gptq=false
 gptq_dataset=c4
 gptq_nsamples=128
 gptq_seqlen=2048
@@ -35,23 +35,36 @@ gptq_true_sequential=false
 gptq_percdamp=0.01
 gptq_act_order=false
 gptq_static_groups=false
+# LUTGEMM
+lutgemm=true
+rtn=$4
+do_packing=false
+round=$3
+
 # Chatbot Simulation
 chat=false
-# Log
-logfile='logs/out.txt'
-# Analysis Tools
-analyze_stats=false
-stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
-get_layerwise_distance=false
 
-for bits_a in 16
+mkdir -p logs
+mkdir -p cache
+
+for bits_a in $bits_a
 do
-for bits_w in 4
-do
-for smoothquant in $smoothquant
+for bits_w in ${bits_w[@]}
 do
 for gptq in $gptq
 do
+for groupsize_w in ${groupsize_w[@]}
+do
+echo "#========================================================#"
+echo "Running with bits_a=$bits_a, bits_w=$bits_w, smoothquant=$smoothquant, gptq=$gptq, groupsize_w=$groupsize_w"
+
+# Log
+logfile="logs/out-rtn-${rtn}-w${bits_w}a${bits_a}-lutgemm-round${round}-group${groupsize_w}.txt"
+# Analysis Tools
+analyze_stats=false
+get_layerwise_distance=false
+stats_csv_path="cache/rtn-${rtn}-w${bits_w}a${bits_a}-lutgemm-round${round}-group${groupsize_w}.csv"
+
 CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --model_path $model_path \
     --cache_dir $cache_dir \
@@ -81,6 +94,7 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --gptq_percdamp $gptq_percdamp \
     --gptq_act_order $gptq_act_order \
     --gptq_static_groups $gptq_static_groups \
+    --lutgemm $lutgemm --do_packing $do_packing --round $round --rtn $rtn \
     --chat $chat \
     --logfile $logfile \
     --analyze_stats $analyze_stats \
