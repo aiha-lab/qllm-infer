@@ -61,6 +61,65 @@ def main(args):
             from lib.quantization.act_quant import add_act_quant
             add_act_quant(model, args)
 
+    # KV Cache Quantization
+    # KIVI
+    if args.kivi:
+        # delete Vanilla model
+        del model
+        torch.cuda.empty_cache()
+        
+        print("\n********** KV Cache Quantization: KIVI **********\n")
+
+        from lib.kivi.models.llama_kivi_qllm import LlamaForCausalLM_KIVI
+
+        # Support only INT4/INT2 Quantization of KV Cache
+        assert args.kivi_k_bits in [4, 2] and args.kivi_v_bits in [4, 2]
+
+        config = transformers.LlamaConfig.from_pretrained(args.model_path)
+        config.k_bits = args.kivi_k_bits
+        config.v_bits = args.kivi_v_bits
+        config.group_size = args.kivi_group_size
+        config.residual_length = args.kivi_residual_length
+        config.prefill_with_quant = args.kivi_prefill_with_quant
+        config.use_flash = True # for FlashAttention-2
+
+        # load modified model
+        model = LlamaForCausalLM_KIVI.from_pretrained(
+            pretrained_model_name_or_path=args.model_path,
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            device_map="auto",
+            config=config,
+        )
+
+    # KVQuant
+    if args.kvquant:
+        # delete Vanilla model
+        del model
+        torch.cuda.empty_cache()
+        
+        print("\n********** KV Cache Quantization: KVQuant **********\n")
+        
+        from lib.kvquant.models.llama_kvquant_qllm import LlamaForCausalLM_KVQuant
+        from lib.kvquant.quant.llama_simquant import get_modified_model_qllm
+
+        # Support only 4/3/2-Bit Quantization of KV Cache
+        assert args.kvquant_kv_bits in [4, 3, 2]
+
+        model_name = args.model_path.split('/')[-1]
+        quantizer_path = "lib/kvquant/quant/quantizers/"
+        quantizer_path += "quantizers_{}_{}bits.pickle".format(model_name, args.kvquant_kv_bits)
+        use_flash = True # for FlashAttention-2
+        
+        # load modified model
+        model = get_modified_model_qllm(
+            args.model_path, quantizer_path, use_flash,
+            args.kvquant_prefill_with_quant, args.kvquant_kv_bits, 
+            args.kvquant_nuq, args.kvquant_include_sparse, 
+            args.kvquant_sparsity_threshold, args.kvquant_first_few_fp16,
+            LlamaForCausalLM_KVQuant
+        )
+
     # Analysis Tool
     if args.analyze_stats:
         from utils.statistics import summarize_stats
@@ -71,12 +130,15 @@ def main(args):
         stats = get_layerwise_distance(model, tokenizer, fp_state_dict, args)
         return
 
-    # Inference (Chatbot, Perplexity, LM-Eval)
+    # Inference (Chatbot, NIAH, Perplexity, LM-Eval)
     ppls = dict()
     results = dict()
     if args.chat:
         from utils.chatbot import chatbot_play
         chatbot_play(model, tokenizer, max_new_tokens=128, device='cuda')
+    if args.niah:
+        from utils.needle_in_a_haystack.needle_in_a_haystack_example import niah_example
+        niah_example(model, tokenizer)
     if args.eval_ppl:
         from utils.perplexity import eval_ppl
         ppls = eval_ppl(model.cuda(), tokenizer, args)
@@ -144,6 +206,21 @@ if __name__ == '__main__':
     parser.add_argument('--gptq_percdamp', type=float, default=.01)
     parser.add_argument('--gptq_act_order', type=str2bool, default=False)
     parser.add_argument('--gptq_static_groups', type=str2bool, default=False)
+    # KIVI Configs
+    parser.add_argument('--kivi', type=str2bool, default=False)
+    parser.add_argument('--kivi_k_bits', type=int, default=4)
+    parser.add_argument('--kivi_v_bits', type=int, default=4)
+    parser.add_argument('--kivi_group_size', type=int, default=32)
+    parser.add_argument('--kivi_residual_length', type=int, default=128)
+    parser.add_argument('--kivi_prefill_with_quant', type=str2bool, default=False)    
+    # KVQuant Configs
+    parser.add_argument('--kvquant', type=str2bool, default=False)
+    parser.add_argument('--kvquant_kv_bits', type=int, default=4)
+    parser.add_argument('--kvquant_nuq', type=str2bool, default=True)
+    parser.add_argument('--kvquant_include_sparse', type=str2bool, default=True)
+    parser.add_argument('--kvquant_sparsity_threshold', type=float, default=0.99)
+    parser.add_argument('--kvquant_first_few_fp16', type=int, default=1)
+    parser.add_argument('--kvquant_prefill_with_quant', type=str2bool, default=False)    
     # LUT-GEMM Configs
     parser.add_argument('--lutgemm', type=str2bool, default=False)
     parser.add_argument('--rtn', type=str2bool, default=False)
@@ -151,6 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('--round', type=int, default=1)
     # Others
     parser.add_argument('--chat', type=str2bool, default=False)
+    parser.add_argument('--niah', type=str2bool, default=False)
     parser.add_argument('--logfile', type=str, default='./logs/dummy')
     # Analysis Tools
     parser.add_argument('--analyze_stats', type=str2bool, default=False)
