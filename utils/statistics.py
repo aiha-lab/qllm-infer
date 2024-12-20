@@ -109,12 +109,21 @@ def get_layerwise_distance(model, tokenizer, fp_state_dict, args):
 
     # Reset quantizer
     logging.info('===> Reset model')
-    for name, module in model.named_modules():
-        if isinstance(module, ActQuantLinear):
-            module.bit = 16
-    for name, module in model.named_modules():
-        if isinstance(module, torch.nn.Linear):
-            module.state_dict()['weight'].copy_(fp_state_dict[name].data)
+    if args.zeroquant:
+        # Delete original model
+        del model
+        from utils.import_model import model_from_hf_path
+        model = model_from_hf_path(args.model_path,
+                    args.use_cuda_graph,
+                    device_map='auto',
+                ).eval()
+    else:
+        for name, module in model.named_modules():
+            if isinstance(module, ActQuantLinear):
+                module.bit = 16
+        for name, module in model.named_modules():
+            if isinstance(module, torch.nn.Linear):
+                module.state_dict()['weight'].copy_(fp_state_dict[name].data)
 
     # FP16 Forward
     fp_act_dict = forward_with_hooks(model, trainloader)
@@ -123,6 +132,8 @@ def get_layerwise_distance(model, tokenizer, fp_state_dict, args):
     # Get layerwise SQNR
     distance_dict = {'sqnr':dict(),'mse':dict()}
     for k, v in q_act_dict['input'].items():
+        if args.zeroquant:
+            k = k.split('module.')[1]
         distance_dict['sqnr'][k] = sqnr(fp_act_dict['input'][k],v)
         distance_dict['mse'][k] = mse(fp_act_dict['input'][k],v)
 

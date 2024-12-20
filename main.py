@@ -30,31 +30,36 @@ def main(args):
             if isinstance(module, torch.nn.Linear):
                 fp_state_dict[name] = module.weight.data.cpu()
 
-   # Weight Quantization
-    if args.bits_w < 16:
-        from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
-        if args.lutgemm:
-            from lib.lutgemm.quantize_bcq import quantize_lutgemm  # lutgemm-specific BCQ format
-            # Case: lutgemm-only (BCQ format)
-            quantize_lutgemm(model, args, dev='cuda')
-            print("Applied LUT-GEMM with BCQ format.")
-            if args.do_packing:
-                # [TODO] using kernel
-                raise NotImplementedError 
-        else:
-            if args.gptq:
-                # Case: gptq-only
-                quantize_gptq(model, args, dev='cuda')
-                print("Applied GPTQ quantization.")
+    # Quantization
+    if args.zeroquant:
+        from lib.zeroquant.get_zeroquant import get_zeroquant_model
+        model = get_zeroquant_model(model, tokenizer, device='cuda', args=args)
+    else:
+        # Weight Quantization
+        if args.bits_w < 16:
+            from lib.quantization.weight_quant import quantize_gptq, quantize_nearest
+            if args.lutgemm:
+                from lib.lutgemm.quantize_bcq import quantize_lutgemm  # lutgemm-specific BCQ format
+                # Case: lutgemm-only (BCQ format)
+                quantize_lutgemm(model, args, dev='cuda')
+                print("Applied LUT-GEMM with BCQ format.")
+                if args.do_packing:
+                    # [TODO] using kernel
+                    raise NotImplementedError 
             else:
-                # Case: nearest-only
-                quantize_nearest(model, args, dev='cuda')
-                print("Applied nearest quantization.")
-
-    # Activation Quantization
-    if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
-        from lib.quantization.act_quant import add_act_quant
-        add_act_quant(model, args)
+                if args.gptq:
+                    # Case: gptq-only
+                    quantize_gptq(model, args, dev='cuda')
+                    print("Applied GPTQ quantization.")
+                else:
+                    # Case: nearest-only
+                    quantize_nearest(model, args, dev='cuda')
+                    print("Applied nearest quantization.")
+    
+        # Activation Quantization
+        if args.bits_a < 16 or args.analyze_stats: # Using custom Linear
+            from lib.quantization.act_quant import add_act_quant
+            add_act_quant(model, args)
 
     # Analysis Tool
     if args.analyze_stats:
@@ -127,6 +132,9 @@ if __name__ == '__main__':
     parser.add_argument('--smoothquant_dataset', type=str, default='pile')
     parser.add_argument('--smoothquant_nsamples', type=int, default=512)
     parser.add_argument('--smoothquant_seqlen', type=int, default=512)
+    # ZeroQuant Configs
+    parser.add_argument('--zeroquant', type=str2bool, default=False)
+    parser.add_argument('--zeroquant_lkd', type=str2bool, default=False)
     # GPTQ Configs
     parser.add_argument('--gptq', type=str2bool, default=False)
     parser.add_argument('--gptq_dataset', type=str, default='c4')
