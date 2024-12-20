@@ -4,3 +4,16 @@ __pycache__/
 logs/*
 *.bin
 lib/lutgemm/__pycache__/
+
+.vscode/
+.favorites.json
+
+# KIVI
+lib/kivi/kivi.egg-info
+lib/kivi/quant/kivi_gemv.cpython-310-x86_64-linux-gnu.so
+lib/kivi/quant/build
+lib/kivi/quant/kivi_gemv.egg-info
+
+# KVQuant
+lib/kvquant/gradients/outputs/
+lib/kvquant/quant/kvquant.egg-info/
