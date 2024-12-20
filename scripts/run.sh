@@ -7,6 +7,8 @@ DEVICES=$1
 model_path=$2
 cache_dir='./cache'
 tasks=none
+#tasks=boolq,arc_challenge,arc_easy,hellaswag,piqa,winogrande
+#tasks=gsm8k
 num_fewshot=none
 limit=none
 eval_ppl=true
@@ -20,6 +22,8 @@ groupsize_a=-1
 bits_w=8
 sym_w=false
 groupsize_w=-1
+#llm.int8()
+llm_int8=false
 # SmoothQuant
 smoothquant=false
 smoothquant_alpha=0.5
@@ -44,11 +48,11 @@ analyze_stats=false
 stats_csv_path='cache/llama3.1-8b-instruct-w8a8sq.csv'
 get_layerwise_distance=false
 
-for bits_a in 8
+for bits_a in 16
 do
-for bits_w in 8
+for bits_w in 16
 do
-for smoothquant in true
+for smoothquant in false
 do
 for gptq in false
 do
@@ -68,6 +72,7 @@ CUDA_VISIBLE_DEVICES=$DEVICES python main.py \
     --bits_w $bits_w \
     --sym_w $sym_w \
     --groupsize_w $groupsize_w \
+    --llm_int8 $llm_int8 \
     --smoothquant $smoothquant \
     --smoothquant_alpha $smoothquant_alpha \
     --smoothquant_dataset $smoothquant_dataset \

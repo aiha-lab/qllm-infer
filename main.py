@@ -7,15 +7,25 @@ import logging
 import transformers
 import warnings
 import torch
+from transformers import BitsAndBytesConfig
+
 logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 def main(args):
+    if args.llm_int8:
+        quantization_config = BitsAndBytesConfig(
+        load_in_8bit=True, 
+        )
+    else:
+        quantization_config = None
+
     # Load Huggingface Model
     from utils.import_model import model_from_hf_path
     model = model_from_hf_path(args.model_path,
                 args.use_cuda_graph,
                 device_map='auto',
+                quantization_config=quantization_config,
             ).eval()
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.model_path)
 
@@ -59,7 +69,7 @@ def main(args):
         chatbot_play(model, tokenizer, max_new_tokens=128, device='cuda')
     if args.eval_ppl:
         from utils.perplexity import eval_ppl
-        ppls = eval_ppl(model.cuda(), tokenizer, args)
+        ppls = eval_ppl(model, tokenizer, args)
     if len(args.tasks) > 0:
         import lm_eval
         lm = lm_eval.models.huggingface.HFLM(
@@ -107,6 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--sym_w', type=str2bool, default=False)
     parser.add_argument('--groupsize_w', type=int, default=-1)
     # SmoothQuant Configs
+    parser.add_argument('--llm_int8', type=str2bool, default=False)
     parser.add_argument('--smoothquant', type=str2bool, default=False)
     parser.add_argument('--smoothquant_alpha', type=float, default=0.5)
     parser.add_argument('--smoothquant_dataset', type=str, default='pile')
