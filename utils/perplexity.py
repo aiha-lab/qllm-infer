@@ -31,9 +31,9 @@ def eval_ppl(model, tokenizer, args,
         for ii in progress:
             input = input_tok[ii, :].cuda().view(1, -1)
             output = model(input,
-                           use_cache=False,
-                           output_hidden_states=False,
-                           output_attentions=False)[0]
+                        use_cache=False,
+                        output_hidden_states=False,
+                        output_attentions=False)[0]
             shift_logits = output[:, :-1, :].contiguous()
             shift_labels = input[:, 1:]
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)),
