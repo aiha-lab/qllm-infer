@@ -45,14 +45,14 @@ gptq_static_groups=false
 
 # KIVI
 kivi=false
-kivi_prefill_with_quant=true
+kivi_prefill_with_quant=true # set to false for generative tasks
 kivi_k_bits=4 # 4, 2
 kivi_v_bits=4 # 4, 2
 kivi_group_size=32
 kivi_residual_length=128
 # KVQuant
 kvquant=false
-kvquant_prefill_with_quant=true
+kvquant_prefill_with_quant=true # set to false for generative tasks
 kvquant_kv_bits=4 # 4, 3, 2
 kvquant_nuq=true
 kvquant_include_sparse=true
