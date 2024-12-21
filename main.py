@@ -151,7 +151,7 @@ def main(args):
         niah_example(model, tokenizer)
     if args.eval_ppl:
         from utils.perplexity import eval_ppl
-        ppls = eval_ppl(model if args.llm.int8 else model.cuda(), tokenizer, args)
+        ppls = eval_ppl(model if args.llm_int8 else model.cuda(), tokenizer, args)
     if len(args.tasks) > 0:
         import lm_eval
         lm = lm_eval.models.huggingface.HFLM(
