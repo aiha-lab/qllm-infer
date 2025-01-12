@@ -13,6 +13,7 @@ cd /root/qllm-infer/lm-evaluation-harness && pip install -e .
 ## Quick Links
 - [Weight-Activation Quantization](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#weight-activation-quantization)
   - [SmoothQuant](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#smoothquant-accurate-and-efficient-post-training-quantization-for-large-language-models)
+  - [LLM.int8()](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#llmint8-8-bit-matrix-multiplication-for-transformers-at-scaleneurips-2022)
   - [ZeroQuant](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#zeroquant-efficient-and-affordable-post-training-quantization-for-large-scale-transformers-neurips-2022)
 - [Weight-Only Quantization](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#weight-only-quantization)
   - [GPTQ](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#gptq-accurate-post-training-quantization-for-generative-pre-trained-transformers)
