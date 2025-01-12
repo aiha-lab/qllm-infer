@@ -1,4 +1,22 @@
-# LLM Quantization Framework
+# LLM Quantization and Benchmarking Framework
+## Introduction
+Large Language Models (LLMs) have demonstrated remarkable performance across various domains, surpassing human capabilities in tasks such as chatbot interactions, document summarization, and problem-solving. However, the massive number of parameters in LLMs leads to significant memory and computational overhead, posing challenges for efficient deployment. To address these challenges, recent researchs have focused on quantization techniques to reduce memory and computational requirements.
+
+LLM quantization methods can be broadly categorized into three approaches: (1) **weight-activation quantization**, which quantizes both weights and activations to optimize GEMM operations; (2) **weight-only quantization**, which significantly reduces memory overhead by focusing solely on weights; and (3) **KV cache quantization**, which targets the storage efficiency of key-value caches. Despite the variety of techniques proposed, these methods have often been evaluated under different conditions, and cross-category comparisons remain limited. 
+
+This project aims to unify and compare these quantization techniques within a single evaluation framework, providing a holistic analysis. The methods covered in this study include the following:
+- Weight-Activation Quantization
+  - SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models
+  - LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale
+  - ZeroQuant: Efficient and Affordable Post-Training Quantization for Large-Scale Transformers
+- Weight-Only Quantization
+  - GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers
+  - LUT-GEMM: Quantized Matrix Multiplication based on LUTs for Efficient Inference in Large-Scale Generative Language Models
+  - SpQR: A Sparse-Quantized Representation for Near-Lossless LLM Weight Compression
+- Key-Value Cache Quantization
+  - KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache
+  - KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization
+
 ## Environment
 ```bash
 # Clone the code
