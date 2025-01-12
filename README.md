@@ -7,7 +7,7 @@ QLLM_PATH=${PWD}/qllm-infer
 
 # Requirements
 cd /root/qllm-infer && pip install -r requirements.txt
-cd /root/qllm-infer/lm-evaluation-harness && pip install -e . 
+cd /root/qllm-infer/lm-evaluation-harness && pip install -e .
 ```
 
 ## Quick Links
@@ -154,6 +154,92 @@ By setting `chat=true`, you can run a chatbot simulation using the quantized mod
 |     W8A8 SQ (Wiki2 ppl: 7.28)     | If I have just overtaken the third person, that means I was behind them initially. After overtaking them, I am now in their position, which is the third position. The person I just overtook is now behind me, in the fourth position. |   |
 |     W6A6 RTN (Wiki2 ppl: 8.16)    | If I've just overtaken the third person, that means I was behind them initially, but I've now moved ahead of them. So, my current position is 2nd, and the person I just overtook is in 3rd place.                                      |   |
 |     W6A6 SQ (Wiki2 ppl: 8.12)     | If I have just overtaken the third person, that means I was behind them and have now passed them.  So, my current position is 3rd, and the person I just overtook is now behind me in 4th place.                                        |   |
+
+***
+## LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale(NeurIPS 2022)
+
+### **Summary**
+**LLM.int8()** is a method designed to enable memory-efficient inference on large-scale Transformer models by compressing matrix multiplication operations into 8-bit precision. Unlike conventional 8-bit quantization approaches, it handles outlier features (extremely large-magnitude activations in certain dimensions) through a mixed-precision decomposition, significantly reducing memory requirements while preserving the 16-bit level of accuracy.
+
+#### **Key Steps**
+1. **Vector-wise Quantization**
+    - Treat each inner product of the matrix multiplication independently, assigning separate normalization constants to rows (activations) and columns (weights).
+    - Improves precision compared to basic row-wise or column-wise scaling.
+2. **Mixed-Precision Decomposition**
+    - Identifies and isolates only the “outlier feature dimensions,” handling them with 16-bit precision.
+    - The remaining ~99.9% of the dimensions are processed in 8-bit, offering large memory savings with minimal quality loss.
+3. **Immediate Conversion**
+    - Can load a 16-bit or 32-bit checkpoint (e.g., 175B parameters) and convert it to 8-bit on the fly without extra fine-tuning.
+    - Offers nearly degradation-free performance across various downstream tasks.
+
+
+## **Code Structure**
+
+The following is a **code structure** for implementing **LLM.int8()**, which uses mixed precision (8-bit + 16-bit) quantization. It outlines the roles of different modules and their usage in a clear, modular format.
+
+---
+
+### `main.py`
+- **Primary execution script** for applying LLM.int8() quantization and performing inference/evaluation.
+- Example usage:
+  ```bash
+  bash scripts/run_llm_int8.sh 1 /path/to/LLM
+  ```
+
+
+### **Key Settings for LLM.int8()**
+
+1. **Integration with Transformers via BitsAndBytes**  
+   - **LLM.int8()** is integrated into the `transformers` library through the **BitsAndBytes Config**.  
+   - By default, the **outlier threshold** is set to `6.0`, which has been verified to work effectively without impacting accuracy.  
+
+2. **Vector-wise Quantization**  
+   - **Vector-wise quantization** is the default configuration, enabling row- and column-wise scaling to enhance precision during 8-bit matrix multiplication.
+
+3. **Mixed-Precision Decomposition**  
+   - The **mixed-precision decomposition algorithm** is implemented in the following file:  
+     ```bash
+     transformers/bitsandbytes/autograd/_functions.py
+     ```
+   - This handles outlier dimensions in 16-bit precision while performing 8-bit computation for the rest.
+---
+
+
+
+### **Benchmarks**
+
+### **Perplexityon on WikiText & C4**
+- Both LLM.int8() and SmoothQuant show almost no degradation compared to the 16-bit baseline.
+- Addressing outliers effectively yields lower PPL than RTN.
+
+| **Method**    | **Bits (KV Cache)** | **Wikitext-2 PPL ↓** | **C4 PPL ↓** |
+|:-------------:|:-------------------:|:--------------------:|:------------:|
+| **Baseline**  | 16                 | 7.24                 | 10.34        |
+| **RTN**       | 8                  | 7.30                 | 10.43        |
+| **LLM.int8()**| 8                  | 7.29                 | 10.41        |
+| **SmoothQuant**| 8                  | 7.28                 | 10.41        |
+
+
+#### **Accuracy on Zero-shot CSQA, MMLU**
+- Mixed-precision outperforms or closely matches RTN.
+- Even for large-scale models, the accuracy remains nearly unaffected.
+
+| **Model**                 | **Method**                 | **BoolQ** | **ARC-C** | **ARC-E** | **HellaSwag** | **PIQA** | **WinoGrande** | **CSQA Average** | **MMLU ↑** |
+|:--------------------------:|:--------------------------:|:---------:|:---------:|:---------:|:-------------:|:-------:|:-------------:|:----------------:|:----------:|
+| **LLaMA-3.1-8B-Instruct** | Baseline                  | 84.07     | 52.05     | 82        | 59.1          | 80.03   | 74.11         | 71.89            | 67.92      |
+|                            | RTN                       | 84.34     | 52.56     | 81.52     | 59.08         | 79.22   | 73.24         | 71.66            | 67.41      |
+|                            | LLM.int8()                | 84.28     | 51.96     | 81.86     | 59.11         | 79.64   | 74.01         | 71.81            | 67.59      |
+|                            | SmoothQuant               | 84.22     | 52.22     | 82.37     | 59.25         | 79.65   | 73.95         | 71.94            | 67.44      |
+
+
+#### **Conversational Abilities**
+- In conversational or QA tasks, the quality of answers remains almost indistinguishable from the 16-bit baseline.
+
+|      **Prompt from User** (Wiki2 ppl)      | "Imagine you are participating in a race with a group of people. If you have just overtaken the third person, what's your current position? Where is the person you just overtook?"                                  |
+| :----------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|   **16-bit Baseline (Wiki2 ppl: 7.22)**    | If you have just overtaken the third person, that means you were behind them before, but now you are ahead of them. You are now in the 3rd position, and the person you just overtook is now in the 4th position. |
+|  **W8A8 RTN()<br>(Wiki2 ppl: 7.30)**   | You are now in the third position. The person you just overtook is in the fourth position.   |
+|  **W8A8 LLM.int8()<br>(Wiki2 ppl: 7.29)**   | The person you just overtook is in the fourth position. You are in the third position. The person who was in the third position is now in the fourth position.   |
 
 ***
 ## ZeroQuant: Efficient and Affordable Post-Training Quantization for Large-Scale Transformers (NeurIPS 2022)
@@ -859,6 +945,16 @@ All functionalities related to KVQuant can be found in the `lib/kvquant` directo
     author = {Xiao, Guangxuan and Lin, Ji and Seznec, Mickael and Wu, Hao and Demouth, Julien and Han, Song},
     booktitle = {Proceedings of the 40th International Conference on Machine Learning},
     year = {2023}
+}
+```
+```bib
+@article{dettmers2022gpt3,
+  title={Gpt3. int8 (): 8-bit matrix multiplication for transformers at scale},
+  author={Dettmers, Tim and Lewis, Mike and Belkada, Younes and Zettlemoyer, Luke},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={30318--30332},
+  year={2022}
 }
 ```
 ```bib
