@@ -10,6 +10,18 @@ cd /root/qllm-infer && pip install -r requirements.txt
 cd /root/qllm-infer/lm-evaluation-harness && pip install -e . 
 ```
 
+## Quick Links
+- [Weight-Activation Quantization](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#weight-activation-quantization)
+  - [SmoothQuant](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#smoothquant-accurate-and-efficient-post-training-quantization-for-large-language-models)
+  - [ZeroQuant](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#zeroquant-efficient-and-affordable-post-training-quantization-for-large-scale-transformers-neurips-2022)
+- [Weight-Only Quantization](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#weight-only-quantization)
+  - [GPTQ](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#gptq-accurate-post-training-quantization-for-generative-pre-trained-transformers)
+  - [LUT-GEMM](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#lut-gemm-quantized-matrix-multiplication-based-on-luts-for-efficiency-in-large-scale-generative-language-models-iclr-2024)
+  - [SPQR](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#spqr---a-sparse-quantized-representation-for-near-lossless-llm-weight-compression)
+- [KV Cache Quantization](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#kv-cache-quantization)
+  - [KIVI](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#kivi-a-tuning-free-asymmetric-2bit-quantization-for-kv-cache-icml-2024)
+  - [KVQuant](https://github.com/aiha-lab/qllm-infer?tab=readme-ov-file#kvquant-towards-10-million-context-length-llm-inference-with-kv-cache-quantization-neurips-2024)
+
 ***
 # Weight-Activation Quantization
 ***
