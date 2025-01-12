@@ -42,7 +42,7 @@ The scaling factor in SmoothQuant is applied per input channel, scaling down the
     - Higher $\alpha$ values shift more of the quantization difficulty from activations to weights.
 - **Smoothing the Model**:  
   - **For weights**: Scaling factors are pre-multiplied offline and stored as $\text{diag}(s)W$.  
-  - **For activations**: To avoid runtime scaling, the scaling factor is pre-applied to the channel-wise weights and biases of the preceding LayerNorm, stored as $X\text{diag}(s)^{-1}$.
+  - **For activations**: To avoid runtime scaling, the scaling factor is pre-applied to the channel-wise weights and biases of the preceding LayerNorm ($X\text{diag}(s)^{-1}$).
 
 
 ### Getting Started
